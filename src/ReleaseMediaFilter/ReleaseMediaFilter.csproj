@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NzbDrone.Core</RootNamespace>
+    <AssemblyName>Lidarr.Plugin.$(MSBuildProjectName)</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Version Condition="'$(Version)' == ''">1.0.0</Version>
+    <EnableAnalyzers>false</EnableAnalyzers>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);CS1591;NU1902</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ext\Lidarr\src\NzbDrone.Core\Lidarr.Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ext\Lidarr\src\NzbDrone.Common\Lidarr.Common.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="EnsureLidarr" BeforeTargets="ResolveProjectReferences">
+    <Error
+      Condition="!Exists('..\..\ext\Lidarr\src\NzbDrone.Core\Lidarr.Core.csproj')"
+      Text="Lidarr source was not found at ext/Lidarr. Run .\setup-lidarr.ps1 (or clone https://github.com/Lidarr/Lidarr into ext/Lidarr) before building." />
+  </Target>
+
+</Project>
