@@ -3,7 +3,7 @@ name: Build Plugin
 on:
   push:
     branches:
-      - main
+      - master
     tags-ignore:
       - '**'
   pull_request:
@@ -58,14 +58,14 @@ jobs:
           dotnet test tests/ReleaseMediaFilter.Test/ReleaseMediaFilter.Test.csproj -c Release --no-build --verbosity normal /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false
 
       - name: Zip Plugin
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         run: |
           cd _temp/bin/Release/ReleaseMediaFilter
           zip /tmp/${{ env.PLUGIN_NAME }}.net8.0.zip Lidarr.Plugin.ReleaseMediaFilter.dll Lidarr.Plugin.ReleaseMediaFilter.pdb
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         with:
           tag_name: ${{ env.PLUGIN_VERSION }}
           name: ${{ env.PLUGIN_VERSION }}
