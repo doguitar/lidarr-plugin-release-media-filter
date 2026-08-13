@@ -57,6 +57,18 @@ A failed import does **not** automatically search another indexer. The download 
 .\build.ps1
 ```
 
+`build.ps1` pins Lidarr’s `AssemblyVersion` to match a nightly build (default `3.1.3.4987`). That must match **System → Status** in Lidarr or the plugin will fail to load. Override it with:
+
+```powershell
+.\build.ps1 -LidarrVersion 3.1.3.4987
+```
+
+Zip for install (DLL and PDB at the zip root):
+
+```powershell
+Compress-Archive -Path _temp\bin\Release\ReleaseMediaFilter\Lidarr.Plugin.ReleaseMediaFilter.dll, _temp\bin\Release\ReleaseMediaFilter\Lidarr.Plugin.ReleaseMediaFilter.pdb -DestinationPath Lidarr.Plugin.ReleaseMediaFilter.net8.0.zip -Force
+```
+
 The plugin assembly is `Lidarr.Plugin.ReleaseMediaFilter.dll` under `_temp/bin/Release/ReleaseMediaFilter`. Lidarr installs from a GitHub release zip named `Lidarr.Plugin.ReleaseMediaFilter.net8.0.zip`.
 
 ## Follow-up (not in this version)

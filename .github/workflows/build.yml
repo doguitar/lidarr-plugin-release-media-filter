@@ -18,7 +18,7 @@ env:
   PLUGIN_NAME: Lidarr.Plugin.ReleaseMediaFilter
   PLUGIN_VERSION: 1.0.0.${{ github.run_number }}
   DOTNET_VERSION: 8.0.x
-  LIDARR_VERSION: 3.1.3.4968
+  LIDARR_VERSION: 3.1.3.4987
 
 jobs:
   build:
@@ -44,14 +44,13 @@ jobs:
         run: |
           props=ext/Lidarr/src/Directory.Build.props
           if [ -f "$props" ]; then
-            sed -i -E "s#<VersionPrefix>[0-9.*]+</VersionPrefix>#<VersionPrefix>${LIDARR_VERSION}</VersionPrefix>#" "$props" || true
-            sed -i -E "s#<Version>[0-9.*]+</Version>#<Version>${LIDARR_VERSION}</Version>#" "$props" || true
+            sed -i -E "s#<AssemblyVersion>[0-9.*]+</AssemblyVersion>#<AssemblyVersion>${LIDARR_VERSION}</AssemblyVersion>#" "$props" || true
           fi
 
       - name: Build
         run: |
           dotnet restore ReleaseMediaFilter.sln /p:WarningsNotAsErrors="NU1902"
-          dotnet build ReleaseMediaFilter.sln -c Release /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902"
+          dotnet build ReleaseMediaFilter.sln -c Release --no-incremental /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902"
 
       - name: Test
         run: |
