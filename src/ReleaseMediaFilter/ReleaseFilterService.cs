@@ -82,22 +82,23 @@ public class ReleaseFilterService : IReleaseFilterService
             return new FilterResult { ReleasesInspected = releases.Count };
         }
 
+        var keptLastResort = new List<AlbumRelease>();
+        var deleteCandidates = filtered;
+
         if (allowed.Count == 0 && options.NoAllowedReleaseAction == NoAllowedReleaseAction.KeepLastResort)
         {
+            var keep = PickPreferred(filtered);
+            keptLastResort.Add(keep);
+            deleteCandidates = filtered.Where(release => release.Id != keep.Id).ToList();
             _logger.Info(
-                "Release Media Filter: keeping filtered releases as last resort. albumId={0} filteredCount={1}",
+                "Release Media Filter: keeping filtered release as last resort. albumId={0} release='{1}' extraFiltered={2}",
                 albumId,
-                filtered.Count);
-
-            return new FilterResult
-            {
-                ReleasesInspected = releases.Count,
-                ReleasesKeptLastResort = filtered.Count
-            };
+                keep.Title,
+                deleteCandidates.Count);
         }
 
-        var skippedWithFiles = filtered.Where(HasImportedFiles).ToList();
-        var toDelete = filtered.Except(skippedWithFiles).ToList();
+        var skippedWithFiles = deleteCandidates.Where(HasImportedFiles).ToList();
+        var toDelete = deleteCandidates.Except(skippedWithFiles).ToList();
 
         if (!options.SkipReleasesWithFiles && skippedWithFiles.Count > 0)
         {
@@ -106,6 +107,7 @@ public class ReleaseFilterService : IReleaseFilterService
                 skippedWithFiles.Count,
                 albumId);
         }
+
 
 
         if (toDelete.Count > 0)
@@ -153,6 +155,7 @@ public class ReleaseFilterService : IReleaseFilterService
             ReleasesInspected = releases.Count,
             ReleasesDeleted = toDelete.Count,
             ReleasesSkippedWithFiles = skippedWithFiles.Count,
+            ReleasesKeptLastResort = keptLastResort.Count,
             MonitoredSwitched = switched
         };
     }

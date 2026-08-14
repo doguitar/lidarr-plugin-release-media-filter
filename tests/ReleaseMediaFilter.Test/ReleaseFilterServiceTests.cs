@@ -86,6 +86,25 @@ public class ReleaseFilterServiceTests
     }
 
     [Fact]
+    public void Last_resort_keeps_one_vinyl_and_deletes_the_rest()
+    {
+        var vinylA = Release(1, "Vinyl", trackCount: 8);
+        var vinylB = Release(2, "Vinyl", trackCount: 12);
+        var vinylC = Release(3, "Vinyl", trackCount: 10);
+        _releaseService.GetReleasesByAlbum(1).Returns(
+            _ => new List<AlbumRelease> { vinylA, vinylB, vinylC },
+            _ => new List<AlbumRelease> { vinylB });
+        _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
+
+        var result = _subject.FilterAlbum(1, Blacklist(NoAllowedReleaseAction.KeepLastResort));
+
+        _releaseService.Received(1).DeleteMany(Arg.Is<List<AlbumRelease>>(list =>
+            list.Count == 2 && list.All(release => release.Id != 2)));
+        Assert.Equal(2, result.ReleasesDeleted);
+        Assert.Equal(1, result.ReleasesKeptLastResort);
+    }
+
+    [Fact]
     public void Default_deletes_sole_vinyl_when_no_alternative()
     {
         var vinyl = Release(1, "Vinyl", monitored: true);
