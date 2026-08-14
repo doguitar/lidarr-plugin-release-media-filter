@@ -1,4 +1,7 @@
 using NSubstitute;
+using NzbDrone.Core.IndexerSearch;
+using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Music;
 using NzbDrone.Core.Plugins;
 using Xunit;
@@ -10,6 +13,9 @@ public class ReleaseFilterServiceTests
     private readonly IReleaseService _releaseService = Substitute.For<IReleaseService>();
     private readonly ITrackService _trackService = Substitute.For<ITrackService>();
     private readonly IAlbumService _albumService = Substitute.For<IAlbumService>();
+    private readonly IMediaFileService _mediaFileService = Substitute.For<IMediaFileService>();
+    private readonly IDeleteMediaFiles _deleteMediaFiles = Substitute.For<IDeleteMediaFiles>();
+    private readonly IManageCommandQueue _commandQueue = Substitute.For<IManageCommandQueue>();
     private readonly ReleaseFilterService _subject;
 
     public ReleaseFilterServiceTests()
@@ -18,11 +24,17 @@ public class ReleaseFilterServiceTests
             _releaseService,
             _trackService,
             _albumService,
+            _mediaFileService,
+            _deleteMediaFiles,
+            _commandQueue,
             NLog.LogManager.GetLogger("test"));
     }
 
-    private static FilterOptions Blacklist(NoAllowedReleaseAction fallback = NoAllowedReleaseAction.DeleteFiltered, bool skipFiles = true) =>
-        new(FilterMode.Blacklist, new[] { "Vinyl", "Cassette" }, fallback, skipFiles);
+    private static FilterOptions Blacklist(
+        NoAllowedReleaseAction fallback = NoAllowedReleaseAction.DeleteFiltered,
+        bool skipFiles = true,
+        bool searchAfter = false) =>
+        new(FilterMode.Blacklist, new[] { "Vinyl", "Cassette" }, fallback, skipFiles, searchAfter);
 
     private static AlbumRelease Release(int id, string format, bool monitored = false, int trackCount = 10, string status = "Official")
     {
@@ -55,21 +67,19 @@ public class ReleaseFilterServiceTests
         var vinyl = Release(1, "Vinyl", monitored: true);
         var cassette = Release(2, "Cassette");
         var digital = Release(3, "Digital Media");
-        var remaining = new List<AlbumRelease> { digital };
-
         _releaseService.GetReleasesByAlbum(1).Returns(
             _ => new List<AlbumRelease> { vinyl, cassette, digital },
-            _ => remaining);
+            _ => new List<AlbumRelease> { digital });
         _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
 
         var result = _subject.FilterAlbum(1, Blacklist());
 
-        _releaseService.Received(1).DeleteMany(Arg.Is<List<AlbumRelease>>(list =>
-            list.Count == 2 && list.Any(r => r.Id == 1) && list.Any(r => r.Id == 2)));
+        _releaseService.Received().DeleteMany(Arg.Is<List<AlbumRelease>>(list => list.Count == 2));
         _releaseService.Received(1).SetMonitored(digital);
         Assert.Equal(2, result.ReleasesDeleted);
         Assert.Equal(1, result.MonitoredSwitched);
-        Assert.Equal(0, result.ReleasesSkippedWithFiles);
+        _deleteMediaFiles.DidNotReceiveWithAnyArgs().DeleteTrackFile(default!);
+        _commandQueue.DidNotReceiveWithAnyArgs().Push(default(AlbumSearchCommand)!);
     }
 
     [Fact]
@@ -77,30 +87,28 @@ public class ReleaseFilterServiceTests
     {
         var vinyl = Release(1, "Vinyl", monitored: true);
         _releaseService.GetReleasesByAlbum(1).Returns(new List<AlbumRelease> { vinyl });
+        _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
 
         var result = _subject.FilterAlbum(1, Blacklist(NoAllowedReleaseAction.KeepLastResort));
 
         _releaseService.DidNotReceive().DeleteMany(Arg.Any<List<AlbumRelease>>());
         Assert.Equal(1, result.ReleasesKeptLastResort);
-        Assert.Equal(0, result.ReleasesDeleted);
     }
 
     [Fact]
     public void Last_resort_keeps_one_vinyl_and_deletes_the_rest()
     {
         var vinylA = Release(1, "Vinyl", trackCount: 8);
-        var vinylB = Release(2, "Vinyl", trackCount: 12);
-        var vinylC = Release(3, "Vinyl", trackCount: 10);
+        var vinylB = Release(2, "Vinyl", trackCount: 12, monitored: true);
         _releaseService.GetReleasesByAlbum(1).Returns(
-            _ => new List<AlbumRelease> { vinylA, vinylB, vinylC },
+            _ => new List<AlbumRelease> { vinylA, vinylB },
             _ => new List<AlbumRelease> { vinylB });
         _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
 
         var result = _subject.FilterAlbum(1, Blacklist(NoAllowedReleaseAction.KeepLastResort));
 
-        _releaseService.Received(1).DeleteMany(Arg.Is<List<AlbumRelease>>(list =>
-            list.Count == 2 && list.All(release => release.Id != 2)));
-        Assert.Equal(2, result.ReleasesDeleted);
+        _releaseService.Received().DeleteMany(Arg.Is<List<AlbumRelease>>(list => list.Single().Id == 1));
+        Assert.Equal(1, result.ReleasesDeleted);
         Assert.Equal(1, result.ReleasesKeptLastResort);
     }
 
@@ -111,13 +119,11 @@ public class ReleaseFilterServiceTests
         _releaseService.GetReleasesByAlbum(1).Returns(
             _ => new List<AlbumRelease> { vinyl },
             _ => new List<AlbumRelease>());
-        _trackService.GetTracksByRelease(1).Returns(new List<Track> { Track(10, 1, hasFile: false) });
+        _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
 
         var result = _subject.FilterAlbum(1, Blacklist());
 
-        _trackService.Received(1).DeleteMany(Arg.Is<List<Track>>(tracks => tracks.Count == 1));
-        _releaseService.Received(1).DeleteMany(Arg.Is<List<AlbumRelease>>(list => list.Single().Id == 1));
-        _releaseService.DidNotReceive().SetMonitored(Arg.Any<AlbumRelease>());
+        _releaseService.Received().DeleteMany(Arg.Is<List<AlbumRelease>>(list => list.Single().Id == 1));
         Assert.Equal(1, result.ReleasesDeleted);
     }
 
@@ -135,6 +141,7 @@ public class ReleaseFilterServiceTests
         var result = _subject.FilterAlbum(1, Blacklist());
 
         _releaseService.DidNotReceive().DeleteMany(Arg.Any<List<AlbumRelease>>());
+        _deleteMediaFiles.DidNotReceiveWithAnyArgs().DeleteTrackFile(default!);
         _releaseService.Received(1).SetMonitored(cd);
         Assert.Equal(0, result.ReleasesDeleted);
         Assert.Equal(1, result.ReleasesSkippedWithFiles);
@@ -142,30 +149,74 @@ public class ReleaseFilterServiceTests
     }
 
     [Fact]
-    public void Does_not_delete_release_with_files_even_when_skip_setting_is_off()
+    public void Recycle_bin_deletes_files_when_skip_setting_is_off()
     {
         var vinyl = Release(1, "Vinyl", monitored: true);
         var cd = Release(2, "CD");
+        var file = new TrackFile { Id = 50, Path = @"C:\music\vinyl.flac", AlbumId = 1 };
         _releaseService.GetReleasesByAlbum(1).Returns(
             _ => new List<AlbumRelease> { vinyl, cd },
-            _ => new List<AlbumRelease> { vinyl, cd });
+            _ => new List<AlbumRelease> { cd });
         _trackService.GetTracksByRelease(1).Returns(new List<Track>
         {
             Track(10, 1, hasFile: true),
             Track(11, 1, hasFile: false)
         });
         _trackService.GetTracksByRelease(2).Returns(new List<Track>());
+        _mediaFileService.GetFilesByRelease(1).Returns(new List<TrackFile> { file });
+
+        var result = _subject.FilterAlbum(1, Blacklist(skipFiles: false));
+
+        _deleteMediaFiles.Received(1).DeleteTrackFile(file);
+        _releaseService.Received().DeleteMany(Arg.Is<List<AlbumRelease>>(list => list.Single().Id == 1));
+        _trackService.Received().DeleteMany(Arg.Is<List<Track>>(list => list.Single().Id == 11));
+        Assert.Equal(1, result.ReleasesDeleted);
+        Assert.Equal(1, result.FilesDeleted);
+        Assert.Equal(0, result.ReleasesSkippedWithFiles);
+    }
+
+    [Fact]
+    public void Leaves_release_when_file_cleanup_fails()
+    {
+        var vinyl = Release(1, "Vinyl", monitored: true);
+        var cd = Release(2, "CD", monitored: true);
+        var file = new TrackFile { Id = 50, Path = @"C:\music\vinyl.flac", AlbumId = 1 };
+        _releaseService.GetReleasesByAlbum(1).Returns(new List<AlbumRelease> { vinyl, cd });
+        _trackService.GetTracksByRelease(1).Returns(new List<Track> { Track(10, 1, hasFile: true) });
+        _trackService.GetTracksByRelease(2).Returns(new List<Track>());
+        _mediaFileService.GetFilesByRelease(1).Returns(new List<TrackFile> { file });
+        _deleteMediaFiles.When(d => d.DeleteTrackFile(file)).Do(_ => throw new InvalidOperationException("recycle failed"));
 
         var result = _subject.FilterAlbum(1, Blacklist(skipFiles: false));
 
         _releaseService.DidNotReceive().DeleteMany(Arg.Any<List<AlbumRelease>>());
-        _trackService.DidNotReceive().DeleteMany(Arg.Any<List<Track>>());
         Assert.Equal(0, result.ReleasesDeleted);
         Assert.Equal(1, result.ReleasesSkippedWithFiles);
+        Assert.Equal(0, result.FilesDeleted);
     }
 
     [Fact]
-    public void FilterAlbum_serializes_overlapping_calls_for_the_same_album()
+    public void Queues_album_search_after_file_cleanup_when_enabled()
+    {
+        var vinyl = Release(1, "Vinyl", monitored: true);
+        var cd = Release(2, "CD");
+        var file = new TrackFile { Id = 50, Path = @"C:\music\vinyl.flac", AlbumId = 1 };
+        _releaseService.GetReleasesByAlbum(1).Returns(
+            _ => new List<AlbumRelease> { vinyl, cd },
+            _ => new List<AlbumRelease> { cd });
+        _trackService.GetTracksByRelease(1).Returns(new List<Track> { Track(10, 1, hasFile: true) });
+        _trackService.GetTracksByRelease(2).Returns(new List<Track>());
+        _mediaFileService.GetFilesByRelease(1).Returns(new List<TrackFile> { file });
+
+        var result = _subject.FilterAlbum(1, Blacklist(skipFiles: false, searchAfter: true));
+
+        _commandQueue.Received(1).Push(Arg.Is<AlbumSearchCommand>(c => c.AlbumIds.Single() == 1));
+        Assert.Equal(1, result.SearchesQueued);
+        Assert.Equal(1, result.MonitoredSwitched);
+    }
+
+    [Fact]
+    public async Task FilterAlbum_serializes_overlapping_calls_for_the_same_album()
     {
         var vinyl = Release(1, "Vinyl");
         var cd = Release(2, "CD", monitored: true);
@@ -195,7 +246,7 @@ public class ReleaseFilterServiceTests
         var first = Task.Run(() => _subject.FilterAlbum(1, Blacklist()));
         started.Wait(TimeSpan.FromSeconds(2));
         var second = Task.Run(() => _subject.FilterAlbum(1, Blacklist()));
-        Task.WaitAll(first, second);
+        await Task.WhenAll(first, second);
 
         Assert.Equal(1, maxInFlight);
     }
@@ -213,7 +264,7 @@ public class ReleaseFilterServiceTests
     }
 
     [Fact]
-    public void Does_not_call_file_delete_or_search_services()
+    public void Does_not_delete_album_when_filtering_releases()
     {
         var vinyl = Release(1, "Vinyl");
         var cd = Release(2, "CD", monitored: true);

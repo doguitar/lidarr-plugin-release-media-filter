@@ -21,6 +21,7 @@ public class ReleaseMediaFilterSettings : IProviderConfig
         MediaTypes = DefaultMediaTypes;
         NoAllowedReleaseAction = NoAllowedReleaseAction.KeepLastResort;
         SkipReleasesWithFiles = true;
+        SearchAfterFileCleanup = false;
         ScanIntervalMinutes = DefaultScanIntervalMinutes;
     }
 
@@ -33,15 +34,18 @@ public class ReleaseMediaFilterSettings : IProviderConfig
     [FieldDefinition(2, Label = "When no allowed release remains", Type = FieldType.Select, SelectOptions = typeof(NoAllowedReleaseAction), HelpText = "Keep the last remaining filtered release (default), or delete filtered releases anyway.")]
     public NoAllowedReleaseAction NoAllowedReleaseAction { get; set; }
 
-    [FieldDefinition(3, Label = "Skip releases that already have files", Type = FieldType.Checkbox, HelpText = "Do not delete an album release that already has imported track files. File cleanup is a later mode.")]
+    [FieldDefinition(3, Label = "Skip releases that already have files", Type = FieldType.Checkbox, HelpText = "When on, never delete a release that already has imported files. When off, send those files to Lidarr's recycle bin and then delete the release.")]
     public bool SkipReleasesWithFiles { get; set; }
 
-    [FieldDefinition(4, Label = "Scan interval (minutes)", Type = FieldType.Number, HelpText = "How often to run the library backfill scan. Minimum 60 minutes. Defaults to 1440 (24 hours).")]
+    [FieldDefinition(4, Label = "Search after file cleanup", Type = FieldType.Checkbox, HelpText = "After deleting imported files from a filtered release, search indexers for the newly monitored remaining release.")]
+    public bool SearchAfterFileCleanup { get; set; }
+
+    [FieldDefinition(5, Label = "Scan interval (minutes)", Type = FieldType.Number, HelpText = "How often to run the library backfill scan. Minimum 60 minutes. Defaults to 1440 (24 hours).")]
     public int ScanIntervalMinutes { get; set; }
 
     public FilterOptions ToFilterOptions()
     {
-        return new FilterOptions(FilterMode, ParseMediaTypes(MediaTypes), NoAllowedReleaseAction, SkipReleasesWithFiles);
+        return new FilterOptions(FilterMode, ParseMediaTypes(MediaTypes), NoAllowedReleaseAction, SkipReleasesWithFiles, SearchAfterFileCleanup);
     }
 
     public static IReadOnlyList<string> ParseMediaTypes(string? mediaTypes)

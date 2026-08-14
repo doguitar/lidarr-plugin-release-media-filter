@@ -16,6 +16,10 @@ public sealed class FilterResult
 
     public int MonitoredSwitched { get; init; }
 
+    public int FilesDeleted { get; init; }
+
+    public int SearchesQueued { get; init; }
+
     public FilterResult Add(FilterResult other)
     {
         if (other == null)
@@ -29,7 +33,9 @@ public sealed class FilterResult
             ReleasesDeleted = ReleasesDeleted + other.ReleasesDeleted,
             ReleasesSkippedWithFiles = ReleasesSkippedWithFiles + other.ReleasesSkippedWithFiles,
             ReleasesKeptLastResort = ReleasesKeptLastResort + other.ReleasesKeptLastResort,
-            MonitoredSwitched = MonitoredSwitched + other.MonitoredSwitched
+            MonitoredSwitched = MonitoredSwitched + other.MonitoredSwitched,
+            FilesDeleted = FilesDeleted + other.FilesDeleted,
+            SearchesQueued = SearchesQueued + other.SearchesQueued
         };
     }
 }
