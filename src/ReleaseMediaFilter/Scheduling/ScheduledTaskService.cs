@@ -138,7 +138,7 @@ public class ScheduledTaskService :
             return;
         }
 
-        var initialExecutionTime = DateTime.UtcNow.AddMinutes(-provider.IntervalMinutes - 1);
+        var initialExecutionTime = DateTime.UtcNow;
         var task = new ScheduledTask
         {
             TypeName = typeName,
