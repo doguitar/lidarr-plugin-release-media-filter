@@ -111,7 +111,7 @@ public class ReleaseMediaFilterRefreshHandler :
         }
         catch (Exception ex)
         {
-            _logger.Warn(ex, "Release Media Filter: refresh filter failed. source={0} albumId={1} album='{2}'", source, album.Id, album.Title);
+            _logger.Error(ex, "Release Media Filter: refresh filter failed. source={0} albumId={1} album='{2}'", source, album.Id, album.Title);
         }
         finally
         {
