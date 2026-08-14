@@ -31,12 +31,19 @@ public class ReleaseMediaFilterSettingsTests
     }
 
     [Fact]
-    public void ParseMediaTypes_falls_back_when_empty()
+    public void ParseMediaTypes_returns_empty_when_blank()
     {
-        var parsed = ReleaseMediaFilterSettings.ParseMediaTypes("   ");
+        Assert.Empty(ReleaseMediaFilterSettings.ParseMediaTypes("   "));
+        Assert.Empty(ReleaseMediaFilterSettings.ParseMediaTypes(null));
+    }
 
-        Assert.Contains("Vinyl", parsed);
-        Assert.Contains("Cassette", parsed);
+    [Fact]
+    public void Validate_rejects_empty_media_types()
+    {
+        var settings = new ReleaseMediaFilterSettings { MediaTypes = "  " };
+        var result = settings.Validate();
+
+        Assert.False(result.IsValid);
     }
 
     [Fact]

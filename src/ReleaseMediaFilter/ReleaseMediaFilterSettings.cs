@@ -48,15 +48,13 @@ public class ReleaseMediaFilterSettings : IProviderConfig
     {
         if (string.IsNullOrWhiteSpace(mediaTypes))
         {
-            return ParseMediaTypes(DefaultMediaTypes);
+            return Array.Empty<string>();
         }
 
-        var parsed = mediaTypes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        return mediaTypes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(type => !string.IsNullOrWhiteSpace(type))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        return parsed.Count > 0 ? parsed : ParseMediaTypes(DefaultMediaTypes);
     }
 
     public NzbDroneValidationResult Validate()
