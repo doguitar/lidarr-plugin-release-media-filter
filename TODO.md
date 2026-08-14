@@ -20,7 +20,7 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 - [x] **Tokenize all format matching.** Drop substring `Contains` for long types. Require whole-token match (including `CD` vs `CD-R` / mixed `Vinyl + CD`).
 - [x] **Keep-last-resort should keep one release**, not every filtered pressing (`PickPreferred(filtered)` then delete the rest, still respecting skip-with-files).
 - [x] **Single settings source.** Refresh, scan, and import must use the same enabled definition. If several are enabled, fail closed or merge explicitly.
-- [ ] **Wire scan interval from Connect.** Changing the Connect number should update the job without relying on Metadata `ProviderUpdatedEvent`.
+- [x] **Wire scan interval from Connect.** Changing the Connect number should update the job without relying on Metadata `ProviderUpdatedEvent`.
 - [ ] **Avoid a second settings UI under Metadata** that the resolver does not read (`ScheduledTaskBase` as `MetadataBase`).
 - [ ] **Serialize deletes.** Track delete → release delete → re-query → `SetMonitored` is not transactional. Serialize scan vs refresh for the same album.
 - [ ] **Do not backdate `LastExecution`** so the library scan is eligible immediately on first registration.

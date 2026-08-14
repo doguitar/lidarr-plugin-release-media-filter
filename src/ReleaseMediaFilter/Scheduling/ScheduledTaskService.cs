@@ -6,6 +6,7 @@ using NzbDrone.Common.Cache;
 using NzbDrone.Core.Extras.Metadata;
 using NzbDrone.Core.Jobs;
 using NzbDrone.Core.Messaging.Events;
+using NzbDrone.Core.Notifications;
 using NzbDrone.Core.ThingiProvider.Events;
 
 namespace NzbDrone.Core.Plugins.Scheduling;
@@ -13,7 +14,10 @@ namespace NzbDrone.Core.Plugins.Scheduling;
 public class ScheduledTaskService :
     IHandle<ProviderAddedEvent<IMetadata>>,
     IHandle<ProviderUpdatedEvent<IMetadata>>,
-    IHandle<ProviderDeletedEvent<IMetadata>>
+    IHandle<ProviderDeletedEvent<IMetadata>>,
+    IHandle<ProviderAddedEvent<INotification>>,
+    IHandle<ProviderUpdatedEvent<INotification>>,
+    IHandle<ProviderDeletedEvent<INotification>>
 {
     private readonly IMetadataFactory _metadataFactory;
     private readonly IScheduledTaskRepository _scheduledTaskRepository;
@@ -65,6 +69,32 @@ public class ScheduledTaskService :
     {
         CleanupOrphanedTasks();
     }
+
+    public void Handle(ProviderAddedEvent<INotification> message) => RefreshScanTaskIntervals();
+
+    public void Handle(ProviderUpdatedEvent<INotification> message) => RefreshScanTaskIntervals();
+
+    public void Handle(ProviderDeletedEvent<INotification> message) => RefreshScanTaskIntervals();
+
+    public void RefreshScanTaskIntervals()
+    {
+        var providers = _metadataFactory.GetAvailableProviders()
+            .OfType<IProvideScheduledTask>()
+            .ToList();
+
+        foreach (var provider in providers)
+        {
+            try
+            {
+                UpdateTask(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to refresh scheduled task interval for {0}", provider.GetType().Name);
+            }
+        }
+    }
+
 
     public void InitializeTasks()
     {
