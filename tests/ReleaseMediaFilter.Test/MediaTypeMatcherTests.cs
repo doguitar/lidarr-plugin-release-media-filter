@@ -27,8 +27,11 @@ public class MediaTypeMatcherTests
 
     [Theory]
     [InlineData("HDCD", "CD")]
+    [InlineData("CD-R", "CD")]
     [InlineData("CD-R", "DAT")]
     [InlineData("Digital Media", "Vinyl")]
+    [InlineData("VinylDisc", "Vinyl")]
+    [InlineData("Vinyl", "in")]
     [InlineData("", "Vinyl")]
     public void FormatMatches_negative_cases(string format, string mediaType)
     {
@@ -58,6 +61,7 @@ public class MediaTypeMatcherTests
         Assert.False(MediaTypeMatcher.IsFiltered(new[] { "CD", "Digital Media" }, options));
         Assert.True(MediaTypeMatcher.IsFiltered(new[] { "Vinyl" }, options));
         Assert.True(MediaTypeMatcher.IsFiltered(new[] { "CD", "Vinyl" }, options));
+        Assert.True(MediaTypeMatcher.IsFiltered(new[] { "Vinyl + CD" }, options));
     }
 
     [Fact]

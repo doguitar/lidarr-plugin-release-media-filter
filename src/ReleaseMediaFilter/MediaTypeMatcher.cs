@@ -8,13 +8,7 @@ namespace NzbDrone.Core.Plugins;
 
 public static class MediaTypeMatcher
 {
-    private static readonly HashSet<string> ShortTokens = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CD",
-        "DAT",
-        "DVD",
-        "SACD"
-    };
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(250);
 
     public static IReadOnlyList<string> GetFormats(AlbumRelease release)
     {
@@ -62,7 +56,7 @@ public static class MediaTypeMatcher
             return knownFormats.Any(format => MatchesAnyMediaType(format, options.MediaTypes));
         }
 
-        return knownFormats.Any(format => !MatchesAnyMediaType(format, options.MediaTypes));
+        return knownFormats.Any(format => !AllFormatTokensAllowed(format, options.MediaTypes));
     }
 
     public static bool MatchesAnyMediaType(string format, IEnumerable<string> mediaTypes)
@@ -90,15 +84,105 @@ public static class MediaTypeMatcher
             return false;
         }
 
-        var normalizedFormat = format.Trim().ToLowerInvariant();
-        var normalizedType = mediaType.Trim().ToLowerInvariant();
-
-        if (ShortTokens.Contains(mediaType.Trim()))
+        var formatTokens = Tokenize(format);
+        var typeTokens = Tokenize(mediaType);
+        if (formatTokens.Count == 0 || typeTokens.Count == 0 || typeTokens.Count > formatTokens.Count)
         {
-            var pattern = $@"(?:^|[^a-z0-9])(?:\d+x)?{Regex.Escape(normalizedType)}(?:[^a-z0-9]|$)";
-            return Regex.IsMatch(normalizedFormat, pattern);
+            return false;
         }
 
-        return normalizedFormat.Contains(normalizedType, StringComparison.Ordinal);
+        for (var index = 0; index <= formatTokens.Count - typeTokens.Count; index++)
+        {
+            var windowMatches = true;
+            for (var offset = 0; offset < typeTokens.Count; offset++)
+            {
+                if (!string.Equals(formatTokens[index + offset], typeTokens[offset], StringComparison.Ordinal))
+                {
+                    windowMatches = false;
+                    break;
+                }
+            }
+
+            if (windowMatches)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static List<string> Tokenize(string value)
+    {
+        var parts = Regex.Split(value.Trim().ToLowerInvariant(), @"[^a-z0-9-]+", RegexOptions.None, MatchTimeout);
+        var tokens = new List<string>();
+
+        foreach (var part in parts)
+        {
+            if (string.IsNullOrWhiteSpace(part))
+            {
+                continue;
+            }
+
+            var token = Regex.Replace(part, @"^\d+x", string.Empty, RegexOptions.None, MatchTimeout);
+            if (token.Length > 0)
+            {
+                tokens.Add(token);
+            }
+        }
+
+        return tokens;
+    }
+
+    private static bool AllFormatTokensAllowed(string format, IEnumerable<string> mediaTypes)
+    {
+        var formatTokens = Tokenize(format);
+        if (formatTokens.Count == 0)
+        {
+            return false;
+        }
+
+        var typeSequences = mediaTypes
+            .Select(Tokenize)
+            .Where(tokens => tokens.Count > 0)
+            .OrderByDescending(tokens => tokens.Count)
+            .ToList();
+
+        var index = 0;
+        while (index < formatTokens.Count)
+        {
+            var matched = false;
+            foreach (var sequence in typeSequences)
+            {
+                if (index + sequence.Count > formatTokens.Count)
+                {
+                    continue;
+                }
+
+                var windowMatches = true;
+                for (var offset = 0; offset < sequence.Count; offset++)
+                {
+                    if (!string.Equals(formatTokens[index + offset], sequence[offset], StringComparison.Ordinal))
+                    {
+                        windowMatches = false;
+                        break;
+                    }
+                }
+
+                if (windowMatches)
+                {
+                    index += sequence.Count;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
