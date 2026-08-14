@@ -123,6 +123,29 @@ public class ReleaseFilterServiceTests
     }
 
     [Fact]
+    public void Does_not_delete_release_with_files_even_when_skip_setting_is_off()
+    {
+        var vinyl = Release(1, "Vinyl", monitored: true);
+        var cd = Release(2, "CD");
+        _releaseService.GetReleasesByAlbum(1).Returns(
+            _ => new List<AlbumRelease> { vinyl, cd },
+            _ => new List<AlbumRelease> { vinyl, cd });
+        _trackService.GetTracksByRelease(1).Returns(new List<Track>
+        {
+            Track(10, 1, hasFile: true),
+            Track(11, 1, hasFile: false)
+        });
+        _trackService.GetTracksByRelease(2).Returns(new List<Track>());
+
+        var result = _subject.FilterAlbum(1, Blacklist(skipFiles: false));
+
+        _releaseService.DidNotReceive().DeleteMany(Arg.Any<List<AlbumRelease>>());
+        _trackService.DidNotReceive().DeleteMany(Arg.Any<List<Track>>());
+        Assert.Equal(0, result.ReleasesDeleted);
+        Assert.Equal(1, result.ReleasesSkippedWithFiles);
+    }
+
+    [Fact]
     public void PickPreferred_prefers_digital_then_cd()
     {
         var vinyl = Release(1, "Vinyl", trackCount: 20);

@@ -96,14 +96,17 @@ public class ReleaseFilterService : IReleaseFilterService
             };
         }
 
-        var skippedWithFiles = new List<AlbumRelease>();
-        var toDelete = filtered;
+        var skippedWithFiles = filtered.Where(HasImportedFiles).ToList();
+        var toDelete = filtered.Except(skippedWithFiles).ToList();
 
-        if (options.SkipReleasesWithFiles)
+        if (!options.SkipReleasesWithFiles && skippedWithFiles.Count > 0)
         {
-            skippedWithFiles = filtered.Where(HasImportedFiles).ToList();
-            toDelete = filtered.Except(skippedWithFiles).ToList();
+            _logger.Warn(
+                "Release Media Filter: file-aware delete is not implemented; skipping {0} release(s) that have imported files. albumId={1}",
+                skippedWithFiles.Count,
+                albumId);
         }
+
 
         if (toDelete.Count > 0)
         {
