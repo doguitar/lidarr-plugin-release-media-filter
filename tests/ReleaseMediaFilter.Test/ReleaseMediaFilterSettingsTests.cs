@@ -14,7 +14,7 @@ public class ReleaseMediaFilterSettingsTests
         Assert.Equal(FilterMode.Blacklist, options.Mode);
         Assert.Contains("Vinyl", options.MediaTypes);
         Assert.Contains("Cassette", options.MediaTypes);
-        Assert.Equal(NoAllowedReleaseAction.DeleteFiltered, options.NoAllowedReleaseAction);
+        Assert.Equal(NoAllowedReleaseAction.KeepLastResort, options.NoAllowedReleaseAction);
         Assert.True(options.SkipReleasesWithFiles);
         Assert.Equal(1440, settings.ScanIntervalMinutes);
     }

@@ -27,7 +27,7 @@ Lidarr stores every pressing of a release group. Import scoring looks at **all s
 |---------|---------|-------------|
 | Filter mode | Blacklist | Blacklist deletes matching media. Whitelist keeps only matching media. |
 | Media types | `Vinyl, Cassette` | Comma-separated MusicBrainz medium formats. |
-| When no allowed release remains | Delete filtered releases | Delete anyway, or keep the last filtered release. |
+| When no allowed release remains | Keep as last resort | Keep the last filtered release, or delete anyway. |
 | Skip releases that already have files | On | Do not delete a release that already has imported files. |
 | Scan interval (minutes) | 1440 | Backfill scan interval. Minimum 60. |
 

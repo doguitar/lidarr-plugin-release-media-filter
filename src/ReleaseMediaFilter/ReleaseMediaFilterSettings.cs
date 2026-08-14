@@ -19,7 +19,7 @@ public class ReleaseMediaFilterSettings : IProviderConfig
     {
         FilterMode = FilterMode.Blacklist;
         MediaTypes = DefaultMediaTypes;
-        NoAllowedReleaseAction = NoAllowedReleaseAction.DeleteFiltered;
+        NoAllowedReleaseAction = NoAllowedReleaseAction.KeepLastResort;
         SkipReleasesWithFiles = true;
         ScanIntervalMinutes = DefaultScanIntervalMinutes;
     }
@@ -30,7 +30,7 @@ public class ReleaseMediaFilterSettings : IProviderConfig
     [FieldDefinition(1, Label = "Media types", Type = FieldType.Textbox, HelpText = "Comma-separated MusicBrainz medium formats. Defaults to Vinyl, Cassette.")]
     public string MediaTypes { get; set; }
 
-    [FieldDefinition(2, Label = "When no allowed release remains", Type = FieldType.Select, SelectOptions = typeof(NoAllowedReleaseAction), HelpText = "Delete filtered releases anyway (default), or keep the last remaining filtered release.")]
+    [FieldDefinition(2, Label = "When no allowed release remains", Type = FieldType.Select, SelectOptions = typeof(NoAllowedReleaseAction), HelpText = "Keep the last remaining filtered release (default), or delete filtered releases anyway.")]
     public NoAllowedReleaseAction NoAllowedReleaseAction { get; set; }
 
     [FieldDefinition(3, Label = "Skip releases that already have files", Type = FieldType.Checkbox, HelpText = "Do not delete an album release that already has imported track files. File cleanup is a later mode.")]
