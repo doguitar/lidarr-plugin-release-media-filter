@@ -56,15 +56,12 @@ public class ReleaseMediaFilterScanTask : ScheduledTaskBase<ReleaseMediaFilterSc
             return;
         }
 
-        _logger.Info("Release Media Filter scheduled scan starting");
-
         var artists = _artistService.GetAllArtists() ?? new List<Artist>();
-        var monitored = artists.Where(artist => artist.Monitored).ToList();
         var scanned = 0;
         var failed = 0;
         var aggregate = FilterResult.Empty;
 
-        foreach (var artist in monitored)
+        foreach (var artist in artists)
         {
             try
             {
