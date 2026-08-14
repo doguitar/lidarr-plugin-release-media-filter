@@ -165,6 +165,42 @@ public class ReleaseFilterServiceTests
     }
 
     [Fact]
+    public void FilterAlbum_serializes_overlapping_calls_for_the_same_album()
+    {
+        var vinyl = Release(1, "Vinyl");
+        var cd = Release(2, "CD", monitored: true);
+        var inFlight = 0;
+        var maxInFlight = 0;
+        var started = new ManualResetEventSlim(false);
+
+        _releaseService.GetReleasesByAlbum(1).Returns(_ =>
+        {
+            var current = Interlocked.Increment(ref inFlight);
+            if (current > maxInFlight)
+            {
+                maxInFlight = current;
+            }
+
+            if (current == 1)
+            {
+                started.Set();
+                Thread.Sleep(50);
+            }
+
+            Interlocked.Decrement(ref inFlight);
+            return new List<AlbumRelease> { vinyl, cd };
+        });
+        _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
+
+        var first = Task.Run(() => _subject.FilterAlbum(1, Blacklist()));
+        started.Wait(TimeSpan.FromSeconds(2));
+        var second = Task.Run(() => _subject.FilterAlbum(1, Blacklist()));
+        Task.WaitAll(first, second);
+
+        Assert.Equal(1, maxInFlight);
+    }
+
+    [Fact]
     public void PickPreferred_prefers_digital_then_cd()
     {
         var vinyl = Release(1, "Vinyl", trackCount: 20);

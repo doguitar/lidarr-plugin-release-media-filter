@@ -22,7 +22,7 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 - [x] **Single settings source.** Refresh, scan, and import must use the same enabled definition. If several are enabled, fail closed or merge explicitly.
 - [x] **Wire scan interval from Connect.** Changing the Connect number should update the job without relying on Metadata `ProviderUpdatedEvent`.
 - [x] **Avoid a second settings UI under Metadata** that the resolver does not read (`ScheduledTaskBase` as `MetadataBase`).
-- [ ] **Serialize deletes.** Track delete → release delete → re-query → `SetMonitored` is not transactional. Serialize scan vs refresh for the same album.
+- [x] **Serialize deletes.** Track delete → release delete → re-query → `SetMonitored` is not transactional. Serialize scan vs refresh for the same album.
 - [ ] **Do not backdate `LastExecution`** so the library scan is eligible immediately on first registration.
 - [ ] **Import handler:** do not filter with constructor defaults if `Definition.Settings` is missing.
 

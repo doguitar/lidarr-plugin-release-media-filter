@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
@@ -15,6 +16,8 @@ public interface IReleaseFilterService
 
 public class ReleaseFilterService : IReleaseFilterService
 {
+    private static readonly ConcurrentDictionary<int, object> AlbumGates = new();
+
     private static readonly string[] PreferredFormatOrder =
     {
         "Digital Media",
@@ -68,11 +71,21 @@ public class ReleaseFilterService : IReleaseFilterService
             return FilterResult.Empty;
         }
 
+        var gate = AlbumGates.GetOrAdd(albumId, _ => new object());
+        lock (gate)
+        {
+            return FilterAlbumCore(albumId, options);
+        }
+    }
+
+    private FilterResult FilterAlbumCore(int albumId, FilterOptions options)
+    {
         var releases = _releaseService.GetReleasesByAlbum(albumId) ?? new List<AlbumRelease>();
         if (releases.Count == 0)
         {
             return FilterResult.Empty;
         }
+
 
         var filtered = releases.Where(release => MediaTypeMatcher.IsReleaseFiltered(release, options)).ToList();
         var allowed = releases.Except(filtered).ToList();
