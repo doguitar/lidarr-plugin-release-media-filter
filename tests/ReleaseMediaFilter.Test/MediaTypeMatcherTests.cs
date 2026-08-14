@@ -80,4 +80,11 @@ public class MediaTypeMatcherTests
 
         Assert.False(MediaTypeMatcher.IsFiltered(new[] { "Vinyl" }, options));
     }
+
+    [Fact]
+    public void Tokenize_keeps_hyphenated_formats_and_strips_copy_prefix()
+    {
+        Assert.Equal(new[] { "cd-r" }, MediaTypeMatcher.Tokenize("CD-R"));
+        Assert.Equal(new[] { "vinyl", "cd" }, MediaTypeMatcher.Tokenize("2xVinyl + CD"));
+    }
 }
