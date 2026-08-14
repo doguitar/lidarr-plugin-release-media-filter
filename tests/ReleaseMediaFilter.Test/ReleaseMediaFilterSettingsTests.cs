@@ -63,4 +63,14 @@ public class ReleaseMediaFilterSettingsTests
 
         Assert.True(result.IsValid);
     }
+
+    [Fact]
+    public void Validate_warns_when_whitelist_uses_vinyl_cassette_defaults()
+    {
+        var settings = new ReleaseMediaFilterSettings { FilterMode = FilterMode.Whitelist };
+        var result = settings.Validate();
+
+        Assert.True(result.IsValid);
+        Assert.True(result.HasWarnings);
+    }
 }

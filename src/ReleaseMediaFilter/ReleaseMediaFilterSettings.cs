@@ -59,7 +59,22 @@ public class ReleaseMediaFilterSettings : IProviderConfig
 
     public NzbDroneValidationResult Validate()
     {
-        return new NzbDroneValidationResult(Validator.Validate(this));
+        var result = Validator.Validate(this);
+        if (FilterMode == FilterMode.Whitelist &&
+            ParseMediaTypes(MediaTypes).Any(type =>
+                string.Equals(type, "Vinyl", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(type, "Cassette", StringComparison.OrdinalIgnoreCase)))
+        {
+            var warning = new NzbDroneValidationFailure(
+                nameof(FilterMode),
+                "Whitelist with Vinyl or Cassette selected will delete CD and digital releases.")
+            {
+                IsWarning = true
+            };
+            return new NzbDroneValidationResult(result.Errors.Concat(new[] { warning }));
+        }
+
+        return new NzbDroneValidationResult(result);
     }
 }
 

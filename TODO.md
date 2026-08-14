@@ -28,7 +28,7 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 
 ## Low
 
-- [ ] Warn or confirm when switching to whitelist while media types are still Vinyl/Cassette (would delete CD/digital).
+- [x] Warn or confirm when switching to whitelist while media types are still Vinyl/Cassette (would delete CD/digital).
 - [ ] Add a match timeout on `Regex.IsMatch` in `MediaTypeMatcher`.
 - [ ] Make Connect **Test** actually validate settings (or at least that filtering is enabled).
 - [ ] Decide whether unmonitored artists should be included in the backfill scan.
