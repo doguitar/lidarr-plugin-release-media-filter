@@ -29,15 +29,15 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 ## Low
 
 - [x] Warn or confirm when switching to whitelist while media types are still Vinyl/Cassette (would delete CD/digital).
-- [ ] Add a match timeout on `Regex.IsMatch` in `MediaTypeMatcher`.
-- [ ] Make Connect **Test** actually validate settings (or at least that filtering is enabled).
-- [ ] Decide whether unmonitored artists should be included in the backfill scan.
-- [ ] Narrow `catch (Exception)` so settings failures cannot become deletes and partial deletes are visible.
-- [ ] CI: grant `contents: write` only on `master` / tags, not on `pull_request`.
-- [ ] `setup-lidarr.ps1`: confine `ExtPath` under the repo; sanitize `Branch`.
-- [ ] `build.ps1`: restrict `$LidarrVersion` to version digits before writing XML.
-- [ ] Turn on analyzers / treat warnings as errors for the plugin project.
-- [ ] Make `FilterOptions.MediaTypes` immutable after construction.
+- [x] Add a match timeout on `Regex.IsMatch` in `MediaTypeMatcher`.
+- [x] Make Connect **Test** actually validate settings (or at least that filtering is enabled).
+- [x] Decide whether unmonitored artists should be included in the backfill scan.
+- [x] Narrow `catch (Exception)` so settings failures cannot become deletes and partial deletes are visible.
+- [x] CI: grant `contents: write` only on `master` / tags, not on `pull_request`.
+- [x] `setup-lidarr.ps1`: confine `ExtPath` under the repo; sanitize `Branch`.
+- [x] `build.ps1`: restrict `$LidarrVersion` to version digits before writing XML.
+- [x] Turn on analyzers / treat warnings as errors for the plugin project.
+- [x] Make `FilterOptions.MediaTypes` immutable after construction.
 
 ## Already in good shape (do not regress)
 
