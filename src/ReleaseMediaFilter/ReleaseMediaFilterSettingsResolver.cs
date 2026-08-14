@@ -41,7 +41,7 @@ public class ReleaseMediaFilterSettingsResolver : IReleaseMediaFilterSettingsRes
         try
         {
             var matching = _notificationFactory.Value.All()
-                .Where(definition => definition.Settings is ReleaseMediaFilterSettings)
+                .Where(definition => definition.Enable && definition.Settings is ReleaseMediaFilterSettings)
                 .ToList();
 
             if (matching.Count == 0)

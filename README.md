@@ -20,7 +20,8 @@ Lidarr stores every pressing of a release group. Import scoring looks at **all s
 
 1. Go to **Settings → Connect**.
 2. Click **+** and choose **Release Media Filter**.
-3. Save. Defaults blacklist `Vinyl` and `Cassette`.
+3. Enable at least one Connect event (for example **On Album Import**) so the connection is enabled. Filtering does not run until then.
+4. Save. Defaults blacklist `Vinyl` and `Cassette`.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
