@@ -23,7 +23,21 @@ Push-Location $scriptRoot
 try {
     Assert-Command -Name "git" -Display "git"
 
-    $extFullPath = if ([System.IO.Path]::IsPathRooted($ExtPath)) { $ExtPath } else { Join-Path $scriptRoot $ExtPath }
+    if ($Branch -notmatch '^[\w./-]+$') {
+        throw "Branch contains invalid characters."
+    }
+
+    if ([System.IO.Path]::IsPathRooted($ExtPath)) {
+        throw "ExtPath must be a path relative to the repository root."
+    }
+
+    $extFullPath = [System.IO.Path]::GetFullPath((Join-Path $scriptRoot $ExtPath))
+    $repoRoot = [System.IO.Path]::GetFullPath($scriptRoot)
+    $rootPrefix = if ($repoRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar)) { $repoRoot } else { $repoRoot + [System.IO.Path]::DirectorySeparatorChar }
+    if (-not $extFullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "ExtPath must stay inside the repository."
+    }
+
     $extParent = Split-Path -Parent $extFullPath
     if (-not (Test-Path $extParent)) {
         New-Item -ItemType Directory -Path $extParent -Force | Out-Null
