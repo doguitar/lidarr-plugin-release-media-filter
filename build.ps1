@@ -4,12 +4,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($LidarrVersion -notmatch '^\d+(\.\d+){1,3}$') {
+    throw "LidarrVersion must be a dotted numeric version such as 3.1.3.4987"
+}
 $props = Join-Path $PSScriptRoot "ext\Lidarr\src\Directory.Build.props"
 if (-not (Test-Path $props)) {
     throw "Lidarr source was not found at ext/Lidarr. Run .\setup-lidarr.ps1 first."
 }
-
-Write-Host "Pinning Lidarr AssemblyVersion to $LidarrVersion"
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 $content = [System.IO.File]::ReadAllText($props)
 $pinned = [regex]::Replace(
