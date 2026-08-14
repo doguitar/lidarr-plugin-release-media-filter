@@ -20,7 +20,8 @@ public class AssemblySmokeTests
         var pluginType = Assert.Single(pluginRoots);
         var plugin = Assert.IsType<ReleaseMediaFilterPlugin>(Activator.CreateInstance(pluginType));
         Assert.Equal("Release Media Filter", plugin.Name);
-        Assert.Equal("seanseymour", plugin.Owner);
+        Assert.Equal("doguitar", plugin.Owner);
+        Assert.Equal("https://github.com/doguitar/lidarr-plugin-release-media-filter", plugin.GithubUrl);
         Assert.Equal("Lidarr.Plugin.ReleaseMediaFilter", assembly.GetName().Name);
     }
 

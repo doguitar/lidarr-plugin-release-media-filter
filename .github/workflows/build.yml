@@ -16,7 +16,6 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   PLUGIN_NAME: Lidarr.Plugin.ReleaseMediaFilter
-  PLUGIN_VERSION: 1.0.0.${{ github.run_number }}
   DOTNET_VERSION: 8.0.x
   LIDARR_VERSION: 3.1.3.4987
 
@@ -25,11 +24,58 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      plugin_version: ${{ steps.version.outputs.plugin_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Resolve plugin version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 <<'PY'
+          import json, os, re, urllib.request
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          ref = os.environ["GITHUB_REF"]
+          event = os.environ["GITHUB_EVENT_NAME"]
+          current = "1.0.0.6"
+
+          def parse(tag):
+              tag = (tag or "").lstrip("v")
+              if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", tag):
+                  return tuple(int(p) for p in tag.split("."))
+              return None
+
+          version = current
+          if ref == "refs/heads/master" and event != "pull_request":
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/releases?per_page=100",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "User-Agent": "release-media-filter-ci",
+                  },
+              )
+              with urllib.request.urlopen(req) as resp:
+                  releases = json.load(resp)
+              versions = [parsed for release in releases if (parsed := parse(release.get("tag_name")))]
+              latest = max(versions) if versions else parse(current)
+              nxt = list(latest)
+              nxt[-1] += 1
+              version = ".".join(str(p) for p in nxt)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"plugin_version={version}\n")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"PLUGIN_VERSION={version}\n")
+          print(version)
+          PY
 
       - name: Setup Lidarr source
         run: |
@@ -51,12 +97,12 @@ jobs:
 
       - name: Build
         run: |
-          dotnet restore ReleaseMediaFilter.sln /p:WarningsNotAsErrors="NU1902"
-          dotnet build ReleaseMediaFilter.sln -c Release --no-incremental /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902"
+          dotnet restore ReleaseMediaFilter.sln /p:WarningsNotAsErrors="NU1902" /p:Version="${PLUGIN_VERSION}"
+          dotnet build ReleaseMediaFilter.sln -c Release --no-incremental /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902" /p:Version="${PLUGIN_VERSION}"
 
       - name: Test
         run: |
-          dotnet test tests/ReleaseMediaFilter.Test/ReleaseMediaFilter.Test.csproj -c Release --no-build --verbosity normal /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902"
+          dotnet test tests/ReleaseMediaFilter.Test/ReleaseMediaFilter.Test.csproj -c Release --no-build --verbosity normal /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902" /p:Version="${PLUGIN_VERSION}"
 
       - name: Zip Plugin
         if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
@@ -77,6 +123,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      PLUGIN_VERSION: ${{ needs.build.outputs.plugin_version }}
     steps:
       - name: Download plugin zip
         uses: actions/download-artifact@v4
