@@ -24,7 +24,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: ${{ github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && 'write' || 'read' }}
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,17 +56,36 @@ jobs:
 
       - name: Test
         run: |
-          dotnet test tests/ReleaseMediaFilter.Test/ReleaseMediaFilter.Test.csproj -c Release --no-build --verbosity normal /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false
+          dotnet test tests/ReleaseMediaFilter.Test/ReleaseMediaFilter.Test.csproj -c Release --no-build --verbosity normal /p:TreatWarningsAsErrors=false /p:EnforceCodeStyleInBuild=false /p:WarningsNotAsErrors="NU1902"
 
       - name: Zip Plugin
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         run: |
           cd _temp/bin/Release/ReleaseMediaFilter
           zip /tmp/${{ env.PLUGIN_NAME }}.net8.0.zip Lidarr.Plugin.ReleaseMediaFilter.dll Lidarr.Plugin.ReleaseMediaFilter.pdb
 
+      - name: Upload plugin zip
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-zip
+          path: /tmp/${{ env.PLUGIN_NAME }}.net8.0.zip
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download plugin zip
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-zip
+          path: /tmp
+
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/master'
         with:
           tag_name: ${{ env.PLUGIN_VERSION }}
           name: ${{ env.PLUGIN_VERSION }}
