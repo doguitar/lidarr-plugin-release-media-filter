@@ -40,4 +40,21 @@ public class ReleaseMediaFilterNotificationTests
 
         filterService.Received(1).FilterAlbum(9, options);
     }
+
+    [Fact]
+    public void Test_rejects_empty_media_types()
+    {
+        var subject = new ReleaseMediaFilterNotification(
+            Substitute.For<IReleaseFilterService>(),
+            Substitute.For<IReleaseMediaFilterSettingsResolver>(),
+            NLog.LogManager.GetLogger("test"))
+        {
+            Definition = new NotificationDefinition
+            {
+                Settings = new ReleaseMediaFilterSettings { MediaTypes = " " }
+            }
+        };
+
+        Assert.False(subject.Test().IsValid);
+    }
 }

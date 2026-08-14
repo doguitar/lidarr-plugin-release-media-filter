@@ -27,7 +27,8 @@ public class ReleaseMediaFilterNotification : NotificationBase<ReleaseMediaFilte
 
     public override ValidationResult Test()
     {
-        return new ValidationResult();
+        var settings = Definition?.Settings as ReleaseMediaFilterSettings ?? Settings;
+        return settings.Validate();
     }
 
     public override void OnReleaseImport(AlbumDownloadMessage message)
