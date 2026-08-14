@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using NzbDrone.Core.Annotations;
@@ -32,18 +33,17 @@ public sealed class FilterOptions
         bool skipReleasesWithFiles)
     {
         Mode = mode;
-        MediaTypes = new HashSet<string>(
-            (mediaTypes ?? Array.Empty<string>())
-                .Select(t => t?.Trim())
-                .Where(t => !string.IsNullOrWhiteSpace(t))!,
-            StringComparer.OrdinalIgnoreCase);
+        MediaTypes = (mediaTypes ?? Array.Empty<string>())
+            .Select(t => t?.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .ToFrozenSet(StringComparer.OrdinalIgnoreCase)!;
         NoAllowedReleaseAction = noAllowedReleaseAction;
         SkipReleasesWithFiles = skipReleasesWithFiles;
     }
 
     public FilterMode Mode { get; }
 
-    public HashSet<string> MediaTypes { get; }
+    public IReadOnlySet<string> MediaTypes { get; }
 
     public NoAllowedReleaseAction NoAllowedReleaseAction { get; }
 
