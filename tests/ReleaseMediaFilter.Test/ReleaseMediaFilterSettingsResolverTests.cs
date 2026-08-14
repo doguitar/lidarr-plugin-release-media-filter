@@ -102,4 +102,28 @@ public class ReleaseMediaFilterSettingsResolverTests
 
         Assert.Null(subject.Resolve());
     }
+
+    [Fact]
+    public void Resolve_returns_null_when_multiple_enabled_connections_exist()
+    {
+        var factory = Substitute.For<INotificationFactory>();
+        factory.All().Returns(new List<NotificationDefinition>
+        {
+            new()
+            {
+                OnReleaseImport = true,
+                Settings = new ReleaseMediaFilterSettings { MediaTypes = "Vinyl" }
+            },
+            new()
+            {
+                OnReleaseImport = true,
+                Settings = new ReleaseMediaFilterSettings { MediaTypes = "CD" }
+            }
+        });
+        var subject = new ReleaseMediaFilterSettingsResolver(
+            new Lazy<INotificationFactory>(() => factory),
+            NLog.LogManager.GetLogger("test"));
+
+        Assert.Null(subject.Resolve());
+    }
 }

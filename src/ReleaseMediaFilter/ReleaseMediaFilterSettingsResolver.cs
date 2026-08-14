@@ -52,7 +52,8 @@ public class ReleaseMediaFilterSettingsResolver : IReleaseMediaFilterSettingsRes
 
             if (matching.Count > 1)
             {
-                _logger.Warn("Release Media Filter: multiple connections found ({0}), using first", matching.Count);
+                _logger.Warn("Release Media Filter: multiple enabled connections found ({0}), filtering disabled", matching.Count);
+                return null;
             }
 
             return (ReleaseMediaFilterSettings)matching[0].Settings;
