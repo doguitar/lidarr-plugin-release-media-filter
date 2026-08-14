@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -23,6 +23,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: ${{ github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && 'write' || 'read' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
