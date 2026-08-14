@@ -59,7 +59,7 @@ public class ReleaseMediaFilterSettingsResolver : IReleaseMediaFilterSettingsRes
         }
         catch (Exception ex)
         {
-            _logger.Warn(ex, "Release Media Filter: failed to resolve Connect settings, using defaults");
+            _logger.Warn(ex, "Release Media Filter: failed to resolve Connect settings, filtering disabled");
             return null;
         }
     }

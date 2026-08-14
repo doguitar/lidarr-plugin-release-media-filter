@@ -10,7 +10,7 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 
 ## High
 
-- [ ] **Fail closed on settings load errors.** Exceptions from the notification factory must not fall back to destructive defaults.
+- [x] **Fail closed on settings load errors.** Exceptions from the notification factory must not fall back to destructive defaults.
 - [ ] **Never delete a release that still has files** unless using Lidarr’s file-aware delete path. When skip is off, do not half-delete tracks then `DeleteMany` the release.
 - [ ] **Safer default when no allowed release remains.** Default `DeleteFiltered` can wipe every `AlbumRelease` for an album (including during incomplete refresh). Prefer keep-last-resort as default, or refuse to delete the last remaining copies.
 - [ ] **Empty media types must not silently become Vinyl, Cassette.** Validate the raw string; empty should be invalid or disable filtering. `ParseMediaTypes("")` currently always succeeds.

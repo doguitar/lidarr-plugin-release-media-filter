@@ -90,4 +90,16 @@ public class ReleaseMediaFilterSettingsResolverTests
         Assert.Contains("CD", options!.MediaTypes);
         Assert.DoesNotContain("Cassette", options.MediaTypes);
     }
+
+    [Fact]
+    public void Resolve_returns_null_when_notification_factory_throws()
+    {
+        var factory = Substitute.For<INotificationFactory>();
+        factory.All().Returns(_ => throw new InvalidOperationException("factory failed"));
+        var subject = new ReleaseMediaFilterSettingsResolver(
+            new Lazy<INotificationFactory>(() => factory),
+            NLog.LogManager.GetLogger("test"));
+
+        Assert.Null(subject.Resolve());
+    }
 }
