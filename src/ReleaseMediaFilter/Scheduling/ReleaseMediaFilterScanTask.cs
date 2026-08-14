@@ -8,7 +8,7 @@ using NzbDrone.Core.Plugins.Scheduling;
 
 namespace NzbDrone.Core.Plugins;
 
-public class ReleaseMediaFilterScanTask : ScheduledTaskBase<ReleaseMediaFilterSettings>, IExecute<ReleaseMediaFilterScanCommand>
+public class ReleaseMediaFilterScanTask : ScheduledTaskBase<ReleaseMediaFilterScanSettings>, IExecute<ReleaseMediaFilterScanCommand>
 {
     private readonly IReleaseFilterService _filterService;
     private readonly IArtistService _artistService;

@@ -42,4 +42,15 @@ public class AssemblySmokeTests
         Assert.Contains(handlerType.GetInterfaces(), iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IHandle<>) && iface.GetGenericArguments()[0] == typeof(AlbumUpdatedEvent));
         Assert.Contains(handlerType.GetInterfaces(), iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IHandle<>) && iface.GetGenericArguments()[0] == typeof(AlbumInfoRefreshedEvent));
     }
+
+    [Fact]
+    public void Scan_metadata_settings_expose_no_connect_fields()
+    {
+        var fields = typeof(ReleaseMediaFilterScanSettings)
+            .GetProperties()
+            .Where(property => property.GetCustomAttributes(typeof(NzbDrone.Core.Annotations.FieldDefinitionAttribute), false).Length > 0);
+
+        Assert.Empty(fields);
+        Assert.Equal(typeof(ReleaseMediaFilterScanSettings), typeof(ReleaseMediaFilterScanTask).BaseType!.GetGenericArguments()[0]);
+    }
 }

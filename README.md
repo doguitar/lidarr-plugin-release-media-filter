@@ -42,7 +42,7 @@ Lidarr has no plugin hook before SkyHook writes to the database. After each arti
 3. Monitors a remaining Digital Media or CD release when one exists
 4. Leaves the album with zero releases when nothing allowed remains (automatic import of that album should fail closed)
 
-The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** because of Lidarr’s plugin scheduling API).
+The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** as a scheduler hook, without a second copy of the Connect settings).
 
 A failed import does **not** automatically search another indexer. The download stays as a failed import until you retry or add a later cleanup/search mode.
 
