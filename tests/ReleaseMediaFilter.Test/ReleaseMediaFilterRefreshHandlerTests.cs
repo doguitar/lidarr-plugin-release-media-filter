@@ -41,4 +41,20 @@ public class ReleaseMediaFilterRefreshHandlerTests
 
         filterService.DidNotReceiveWithAnyArgs().FilterAlbum(default, default!);
     }
+
+    [Fact]
+    public void AlbumUpdatedEvent_skips_filter_when_settings_are_missing()
+    {
+        var filterService = Substitute.For<IReleaseFilterService>();
+        var settingsResolver = Substitute.For<IReleaseMediaFilterSettingsResolver>();
+        settingsResolver.Resolve().Returns((FilterOptions?)null);
+        var handler = new ReleaseMediaFilterRefreshHandler(
+            filterService,
+            settingsResolver,
+            NLog.LogManager.GetLogger("test"));
+
+        handler.Handle(new AlbumUpdatedEvent(new Album { Id = 42, Title = "Test Album" }));
+
+        filterService.DidNotReceiveWithAnyArgs().FilterAlbum(default, default!);
+    }
 }

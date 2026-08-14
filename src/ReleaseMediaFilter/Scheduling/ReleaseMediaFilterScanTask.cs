@@ -43,6 +43,12 @@ public class ReleaseMediaFilterScanTask : ScheduledTaskBase<ReleaseMediaFilterSe
         }
 
         var options = _settingsResolver.Resolve();
+        if (options == null)
+        {
+            command.ResultMessage = "Scan skipped: Release Media Filter is not configured in Connect";
+            _logger.Info("Release Media Filter scan skipped: no Connect notification configured");
+            return;
+        }
 
         if (command.ArtistId.GetValueOrDefault() > 0)
         {

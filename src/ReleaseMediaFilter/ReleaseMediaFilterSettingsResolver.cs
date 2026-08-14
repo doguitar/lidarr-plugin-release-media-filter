@@ -7,7 +7,7 @@ namespace NzbDrone.Core.Plugins;
 
 public interface IReleaseMediaFilterSettingsResolver
 {
-    FilterOptions Resolve();
+    FilterOptions? Resolve();
 
     int ResolveScanIntervalMinutes();
 }
@@ -25,9 +25,9 @@ public class ReleaseMediaFilterSettingsResolver : IReleaseMediaFilterSettingsRes
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public FilterOptions Resolve()
+    public FilterOptions? Resolve()
     {
-        return GetSettings()?.ToFilterOptions() ?? new ReleaseMediaFilterSettings().ToFilterOptions();
+        return GetSettings()?.ToFilterOptions();
     }
 
     public int ResolveScanIntervalMinutes()
@@ -46,7 +46,7 @@ public class ReleaseMediaFilterSettingsResolver : IReleaseMediaFilterSettingsRes
 
             if (matching.Count == 0)
             {
-                _logger.Debug("Release Media Filter: no Connect notification found, using defaults");
+                _logger.Debug("Release Media Filter: no Connect notification found, filtering disabled");
                 return null;
             }
 

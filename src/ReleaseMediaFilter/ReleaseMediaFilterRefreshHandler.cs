@@ -88,7 +88,13 @@ public class ReleaseMediaFilterRefreshHandler :
 
         try
         {
-            var result = _filterService.FilterAlbum(album.Id, _settingsResolver.Resolve());
+            var options = _settingsResolver.Resolve();
+            if (options == null)
+            {
+                return;
+            }
+
+            var result = _filterService.FilterAlbum(album.Id, options);
             if (result.ReleasesDeleted > 0 || result.MonitoredSwitched > 0 || result.ReleasesKeptLastResort > 0)
             {
                 _logger.Info(

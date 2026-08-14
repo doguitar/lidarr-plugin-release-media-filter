@@ -4,9 +4,9 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 
 ## Critical
 
-- [ ] **Fail closed without an enabled Connect notification.** Do not filter unless an enabled `ReleaseMediaFilterNotification` exists. Treat missing settings as off, not as Vinyl/Cassette delete.
+- [x] **Fail closed without an enabled Connect notification.** Do not filter unless an enabled `ReleaseMediaFilterNotification` exists. Treat missing settings as off, not as Vinyl/Cassette delete.
 - [ ] **Honor `Enable`.** `INotificationFactory.All()` currently matches on settings type only; disabled connections can still drive deletes.
-- [ ] **Do not apply constructor defaults on refresh/scan.** `Resolve()` must not return `new ReleaseMediaFilterSettings().ToFilterOptions()` when no definition is found.
+- [x] **Do not apply constructor defaults on refresh/scan.** `Resolve()` must not return `new ReleaseMediaFilterSettings().ToFilterOptions()` when no definition is found.
 
 ## High
 
