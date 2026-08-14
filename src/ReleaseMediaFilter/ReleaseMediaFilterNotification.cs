@@ -8,11 +8,16 @@ namespace NzbDrone.Core.Plugins;
 public class ReleaseMediaFilterNotification : NotificationBase<ReleaseMediaFilterSettings>
 {
     private readonly IReleaseFilterService _filterService;
+    private readonly IReleaseMediaFilterSettingsResolver _settingsResolver;
     private readonly Logger _logger;
 
-    public ReleaseMediaFilterNotification(IReleaseFilterService filterService, Logger logger)
+    public ReleaseMediaFilterNotification(
+        IReleaseFilterService filterService,
+        IReleaseMediaFilterSettingsResolver settingsResolver,
+        Logger logger)
     {
         _filterService = filterService ?? throw new ArgumentNullException(nameof(filterService));
+        _settingsResolver = settingsResolver ?? throw new ArgumentNullException(nameof(settingsResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,7 +40,12 @@ public class ReleaseMediaFilterNotification : NotificationBase<ReleaseMediaFilte
                 return;
             }
 
-            var options = (Definition?.Settings as ReleaseMediaFilterSettings ?? new ReleaseMediaFilterSettings()).ToFilterOptions();
+            var options = _settingsResolver.Resolve();
+            if (options == null)
+            {
+                return;
+            }
+
             _filterService.FilterAlbum(album.Id, options);
         }
         catch (Exception ex)
