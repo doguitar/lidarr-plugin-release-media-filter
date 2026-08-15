@@ -3,6 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
+using NzbDrone.Core.IndexerSearch;
+using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Music;
 
 namespace NzbDrone.Core.Plugins;
@@ -27,17 +30,26 @@ public class ReleaseFilterService : IReleaseFilterService
     private readonly IReleaseService _releaseService;
     private readonly ITrackService _trackService;
     private readonly IAlbumService _albumService;
+    private readonly IMediaFileService _mediaFileService;
+    private readonly IDeleteMediaFiles _deleteMediaFiles;
+    private readonly IManageCommandQueue _commandQueue;
     private readonly Logger _logger;
 
     public ReleaseFilterService(
         IReleaseService releaseService,
         ITrackService trackService,
         IAlbumService albumService,
+        IMediaFileService mediaFileService,
+        IDeleteMediaFiles deleteMediaFiles,
+        IManageCommandQueue commandQueue,
         Logger logger)
     {
         _releaseService = releaseService ?? throw new ArgumentNullException(nameof(releaseService));
         _trackService = trackService ?? throw new ArgumentNullException(nameof(trackService));
         _albumService = albumService ?? throw new ArgumentNullException(nameof(albumService));
+        _mediaFileService = mediaFileService ?? throw new ArgumentNullException(nameof(mediaFileService));
+        _deleteMediaFiles = deleteMediaFiles ?? throw new ArgumentNullException(nameof(deleteMediaFiles));
+        _commandQueue = commandQueue ?? throw new ArgumentNullException(nameof(commandQueue));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -86,7 +98,6 @@ public class ReleaseFilterService : IReleaseFilterService
             return FilterResult.Empty;
         }
 
-
         var filtered = releases.Where(release => MediaTypeMatcher.IsReleaseFiltered(release, options)).ToList();
         var allowed = releases.Except(filtered).ToList();
 
@@ -110,18 +121,33 @@ public class ReleaseFilterService : IReleaseFilterService
                 deleteCandidates.Count);
         }
 
-        var skippedWithFiles = deleteCandidates.Where(HasImportedFiles).ToList();
-        var toDelete = deleteCandidates.Except(skippedWithFiles).ToList();
+        var skippedWithFiles = new List<AlbumRelease>();
+        var toDelete = new List<AlbumRelease>();
+        var filesDeleted = 0;
 
-        if (!options.SkipReleasesWithFiles && skippedWithFiles.Count > 0)
+        foreach (var release in deleteCandidates)
         {
-            _logger.Warn(
-                "Release Media Filter: file-aware delete is not implemented; skipping {0} release(s) that have imported files. albumId={1}",
-                skippedWithFiles.Count,
-                albumId);
+            if (!HasImportedFiles(release))
+            {
+                toDelete.Add(release);
+                continue;
+            }
+
+            if (options.SkipReleasesWithFiles)
+            {
+                skippedWithFiles.Add(release);
+                continue;
+            }
+
+            if (!TryDeleteImportedFiles(albumId, release, out var deletedCount))
+            {
+                skippedWithFiles.Add(release);
+                continue;
+            }
+
+            filesDeleted += deletedCount;
+            toDelete.Add(release);
         }
-
-
 
         if (toDelete.Count > 0)
         {
@@ -163,14 +189,65 @@ public class ReleaseFilterService : IReleaseFilterService
                 string.Join('+', MediaTypeMatcher.GetFormats(preferred)));
         }
 
+        var searchesQueued = 0;
+        if (options.SearchAfterFileCleanup && filesDeleted > 0 && remainingAllowed.Count > 0)
+        {
+            try
+            {
+                _commandQueue.Push(new AlbumSearchCommand(new List<int> { albumId }));
+                searchesQueued = 1;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Release Media Filter: failed to queue album search after file cleanup. albumId={0}", albumId);
+            }
+        }
+
         return new FilterResult
         {
             ReleasesInspected = releases.Count,
             ReleasesDeleted = toDelete.Count,
             ReleasesSkippedWithFiles = skippedWithFiles.Count,
             ReleasesKeptLastResort = keptLastResort.Count,
-            MonitoredSwitched = switched
+            MonitoredSwitched = switched,
+            FilesDeleted = filesDeleted,
+            SearchesQueued = searchesQueued
         };
+    }
+
+    private bool TryDeleteImportedFiles(int albumId, AlbumRelease release, out int filesDeleted)
+    {
+        filesDeleted = 0;
+        var files = _mediaFileService.GetFilesByRelease(release.Id) ?? new List<TrackFile>();
+        if (files.Count == 0)
+        {
+            _logger.Warn(
+                "Release Media Filter: tracks report files but none were found; skipping release. albumId={0} releaseId={1}",
+                albumId,
+                release.Id);
+            return false;
+        }
+
+        try
+        {
+            foreach (var file in files)
+            {
+                _deleteMediaFiles.DeleteTrackFile(file);
+                filesDeleted++;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(
+                ex,
+                "Release Media Filter: file cleanup failed; leaving release in place. albumId={0} releaseId={1}",
+                albumId,
+                release.Id);
+            filesDeleted = 0;
+            return false;
+        }
     }
 
     private bool HasImportedFiles(AlbumRelease release)
@@ -183,7 +260,6 @@ public class ReleaseFilterService : IReleaseFilterService
     {
         return releases
             .OrderByDescending(Score)
-            .ThenByDescending(release => string.Equals(release.Status, "Official", StringComparison.OrdinalIgnoreCase))
             .ThenByDescending(release => release.TrackCount)
             .ThenBy(release => release.Id)
             .First();
@@ -192,12 +268,11 @@ public class ReleaseFilterService : IReleaseFilterService
     private static int Score(AlbumRelease release)
     {
         var formats = MediaTypeMatcher.GetFormats(release);
-        for (var index = 0; index < PreferredFormatOrder.Length; index++)
+        for (var i = 0; i < PreferredFormatOrder.Length; i++)
         {
-            var preferred = PreferredFormatOrder[index];
-            if (formats.Any(format => MediaTypeMatcher.FormatMatches(format, preferred)))
+            if (formats.Any(format => string.Equals(format, PreferredFormatOrder[i], StringComparison.OrdinalIgnoreCase)))
             {
-                return (PreferredFormatOrder.Length - index) * 100;
+                return PreferredFormatOrder.Length - i;
             }
         }
 

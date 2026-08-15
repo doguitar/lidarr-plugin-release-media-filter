@@ -16,6 +16,7 @@ public class ReleaseMediaFilterSettingsTests
         Assert.Contains("Cassette", options.MediaTypes);
         Assert.Equal(NoAllowedReleaseAction.KeepLastResort, options.NoAllowedReleaseAction);
         Assert.True(options.SkipReleasesWithFiles);
+        Assert.False(options.SearchAfterFileCleanup);
         Assert.Equal(1440, settings.ScanIntervalMinutes);
     }
 

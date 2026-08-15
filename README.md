@@ -29,6 +29,7 @@ Lidarr stores every pressing of a release group. Import scoring looks at **all s
 | Media types | `Vinyl, Cassette` | Comma-separated MusicBrainz medium formats. |
 | When no allowed release remains | Keep as last resort | Keep the last filtered release, or delete anyway. |
 | Skip releases that already have files | On | Do not delete a release that already has imported files. |
+| Search after file cleanup | Off | After recycle-bin file deletes, search for the remaining monitored release. |
 | Scan interval (minutes) | 1440 | Backfill scan interval. Minimum 60. |
 
 Matching is case-insensitive. `Vinyl` matches `2xVinyl`, `12" Vinyl`, and mixed `Vinyl + CD`. A blacklist drop happens if **any** medium matches. A whitelist keeps a release only if **every** medium matches. Empty/unknown formats are kept.
@@ -44,11 +45,13 @@ Lidarr has no plugin hook before SkyHook writes to the database. After each arti
 
 The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** as a scheduler hook, without a second copy of the Connect settings).
 
-A failed import does **not** automatically search another indexer. The download stays as a failed import until you retry or add a later cleanup/search mode.
+A failed import does **not** automatically search another indexer unless **Search after file cleanup** is on and imported files were deleted.
 
 ### Caveats
 
-- Releases that already have imported files are skipped in this version so the library is not broken.
+- By default, releases that already have imported files are skipped so the library is not broken.
+- If skip-with-files is off, imported files go through Lidarr’s recycle bin before the album release is removed. A failed file delete leaves that release in place.
+- Search after cleanup only runs when at least one file was deleted and an allowed remaining release exists.
 - If Lidarr is allowed to add new artists during import and there are zero DB candidates, identification can still pull vinyl from SkyHook (`GetRemoteCandidates`). That mainly affects unmatched/new-artist imports, not a normal grab for an already-tracked album.
 
 ## Building
@@ -74,7 +77,6 @@ The plugin assembly is `Lidarr.Plugin.ReleaseMediaFilter.dll` under `_temp/bin/R
 
 ## Follow-up (not in this version)
 
-- **Library cleanup mode:** delete or move files for filtered releases that already have files, with an option to search for the newly monitored release.
 - **SkyHook proxy:** strip filtered releases before insert and from remote import candidates so vinyl never reappears in the release picker.
 - Optional unmonitor/delete of the parent album when zero releases remain.
 

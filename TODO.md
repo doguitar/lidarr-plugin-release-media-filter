@@ -38,6 +38,12 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 - [x] `build.ps1`: restrict `$LidarrVersion` to version digits before writing XML.
 - [x] Turn on analyzers / treat warnings as errors for the plugin project.
 - [x] Make `FilterOptions.MediaTypes` immutable after construction.
+- [x] Library cleanup mode: recycle-bin delete imported files when skip-with-files is off; optional indexer search for the remaining release.
+
+## Later
+
+- [ ] SkyHook proxy: strip filtered releases before insert and from remote import candidates.
+- [ ] Optional unmonitor/delete of the parent album when zero releases remain.
 
 ## Already in good shape (do not regress)
 

@@ -30,7 +30,8 @@ public sealed class FilterOptions
         FilterMode mode,
         IEnumerable<string> mediaTypes,
         NoAllowedReleaseAction noAllowedReleaseAction,
-        bool skipReleasesWithFiles)
+        bool skipReleasesWithFiles,
+        bool searchAfterFileCleanup = false)
     {
         Mode = mode;
         MediaTypes = (mediaTypes ?? Array.Empty<string>())
@@ -39,6 +40,7 @@ public sealed class FilterOptions
             .ToFrozenSet(StringComparer.OrdinalIgnoreCase)!;
         NoAllowedReleaseAction = noAllowedReleaseAction;
         SkipReleasesWithFiles = skipReleasesWithFiles;
+        SearchAfterFileCleanup = searchAfterFileCleanup;
     }
 
     public FilterMode Mode { get; }
@@ -48,4 +50,6 @@ public sealed class FilterOptions
     public NoAllowedReleaseAction NoAllowedReleaseAction { get; }
 
     public bool SkipReleasesWithFiles { get; }
+
+    public bool SearchAfterFileCleanup { get; }
 }
