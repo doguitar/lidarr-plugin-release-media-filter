@@ -189,6 +189,7 @@ public class ReleaseFilterService : IReleaseFilterService
             }
         }
 
+
         return new FilterResult
         {
             ReleasesInspected = releases.Count,
@@ -236,7 +237,6 @@ public class ReleaseFilterService : IReleaseFilterService
             string.Join(" | ", ranked.Select(release => release.Title)));
         return 1;
     }
-
     private bool TryDeleteImportedFiles(int albumId, AlbumRelease release, out int filesDeleted)
     {
         filesDeleted = 0;
