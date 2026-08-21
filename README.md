@@ -52,7 +52,7 @@ Lidarr has no plugin hook before SkyHook writes to the database. After each arti
 
 1. Loads the album’s releases
 2. Deletes filtered releases (and their tracks)
-3. Monitors the **first** remaining release in that sort order (or Digital Media / CD when no sort keys are set)
+3. If the album has **no imported files**, monitors the **first** remaining release in that sort order (or Digital Media / CD when no sort keys are set). Albums that already have files keep their current monitored release.
 4. Leaves the album with zero releases when nothing allowed remains (automatic import of that album should fail closed)
 
 The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** as a scheduler hook, without a second copy of the Connect settings).
@@ -61,6 +61,7 @@ A failed import does **not** automatically search another indexer unless **Searc
 
 ### Caveats
 
+- The monitored release is only changed on albums that still have no imported files. Albums that already have files keep their current monitored copy.
 - By default, releases that already have imported files are skipped so the library is not broken.
 - If skip-with-files is off, imported files go through Lidarr’s recycle bin before the album release is removed. A failed file delete leaves that release in place.
 - Search after cleanup only runs when at least one file was deleted and an allowed remaining release exists.

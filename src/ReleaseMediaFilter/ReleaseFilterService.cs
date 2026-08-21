@@ -100,7 +100,7 @@ public class ReleaseFilterService : IReleaseFilterService
             return new FilterResult
             {
                 ReleasesInspected = releases.Count,
-                MonitoredSwitched = SwitchMonitored(albumId, allowed, options)
+                MonitoredSwitched = SwitchMonitored(albumId, allowed, allowed, options)
             };
         }
 
@@ -173,7 +173,7 @@ public class ReleaseFilterService : IReleaseFilterService
             .Where(release => !MediaTypeMatcher.IsReleaseFiltered(release, options))
             .ToList();
 
-        var switched = SwitchMonitored(albumId, remainingAllowed, options);
+        var switched = SwitchMonitored(albumId, remaining, remainingAllowed, options);
 
         var searchesQueued = 0;
         if (options.SearchAfterFileCleanup && filesDeleted > 0 && remainingAllowed.Count > 0)
@@ -201,10 +201,22 @@ public class ReleaseFilterService : IReleaseFilterService
         };
     }
 
-    private int SwitchMonitored(int albumId, IReadOnlyList<AlbumRelease> remainingAllowed, FilterOptions options)
+    private int SwitchMonitored(
+        int albumId,
+        IReadOnlyList<AlbumRelease> remaining,
+        IReadOnlyList<AlbumRelease> remainingAllowed,
+        FilterOptions options)
     {
         if (remainingAllowed.Count == 0)
         {
+            return 0;
+        }
+
+        if (remaining.Any(HasImportedFiles))
+        {
+            _logger.Debug(
+                "Release Media Filter: leaving monitored release unchanged because the album already has files. albumId={0}",
+                albumId);
             return 0;
         }
 

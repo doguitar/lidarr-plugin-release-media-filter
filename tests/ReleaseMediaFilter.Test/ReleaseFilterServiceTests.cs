@@ -144,10 +144,10 @@ public class ReleaseFilterServiceTests
 
         _releaseService.DidNotReceive().DeleteMany(Arg.Any<List<AlbumRelease>>());
         _deleteMediaFiles.DidNotReceiveWithAnyArgs().DeleteTrackFile(default!);
-        _releaseService.Received(1).SetMonitored(cd);
+        _releaseService.DidNotReceive().SetMonitored(Arg.Any<AlbumRelease>());
         Assert.Equal(0, result.ReleasesDeleted);
         Assert.Equal(1, result.ReleasesSkippedWithFiles);
-        Assert.Equal(1, result.MonitoredSwitched);
+        Assert.Equal(0, result.MonitoredSwitched);
     }
 
     [Fact]
@@ -263,6 +263,27 @@ public class ReleaseFilterServiceTests
         var preferred = ReleaseFilterService.PickPreferred(new[] { vinyl, cd, digital });
 
         Assert.Equal(digital.Id, preferred.Id);
+    }
+
+    [Fact]
+    public void Does_not_switch_monitored_when_album_already_has_files()
+    {
+        var longUs = Release(1, "CD", monitored: true, trackCount: 18, countries: "US");
+        var shortGb = Release(2, "CD", trackCount: 10, countries: "GB");
+        _releaseService.GetReleasesByAlbum(1).Returns(new List<AlbumRelease> { longUs, shortGb });
+        _trackService.GetTracksByRelease(1).Returns(new List<Track> { Track(10, 1, hasFile: true) });
+        _trackService.GetTracksByRelease(2).Returns(new List<Track>());
+
+        var options = Blacklist(sortRules: new[]
+        {
+            new ReleaseSortRule(ReleaseSortField.TrackCount, ReleaseSortDirection.Ascending, null)
+        });
+
+        var result = _subject.FilterAlbum(1, options);
+
+        _releaseService.DidNotReceive().SetMonitored(Arg.Any<AlbumRelease>());
+        Assert.Equal(0, result.MonitoredSwitched);
+        Assert.Equal(0, result.ReleasesDeleted);
     }
 
     [Fact]
