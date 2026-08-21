@@ -208,7 +208,8 @@ public class ReleaseFilterService : IReleaseFilterService
             return 0;
         }
 
-        var preferred = PickPreferred(remainingAllowed, options);
+        var ranked = ReleasePreference.Rank(remainingAllowed, options);
+        var preferred = ranked[0];
         if (preferred.Monitored)
         {
             return 0;
@@ -216,10 +217,11 @@ public class ReleaseFilterService : IReleaseFilterService
 
         _releaseService.SetMonitored(preferred);
         _logger.Info(
-            "Release Media Filter: monitored remaining release. albumId={0} release='{1}' formats={2}",
+            "Release Media Filter: monitored first remaining release. albumId={0} release='{1}' formats={2} ranking={3}",
             albumId,
             preferred.Title,
-            string.Join('+', MediaTypeMatcher.GetFormats(preferred)));
+            string.Join('+', MediaTypeMatcher.GetFormats(preferred)),
+            string.Join(" | ", ranked.Select(release => release.Title)));
         return 1;
     }
 

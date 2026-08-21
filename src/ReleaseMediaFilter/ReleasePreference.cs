@@ -109,6 +109,8 @@ public sealed class ReleaseSortRule
 
 public static class ReleasePreference
 {
+    public const string PreviewAction = "previewSort";
+
     private static readonly string[] PreferredFormatOrder =
     {
         "Digital Media",
@@ -116,6 +118,11 @@ public static class ReleasePreference
     };
 
     public static AlbumRelease Pick(IReadOnlyList<AlbumRelease> releases, FilterOptions? options)
+    {
+        return Rank(releases, options)[0];
+    }
+
+    public static IReadOnlyList<AlbumRelease> Rank(IReadOnlyList<AlbumRelease> releases, FilterOptions? options)
     {
         if (releases == null || releases.Count == 0)
         {
@@ -129,7 +136,7 @@ public static class ReleasePreference
                 .OrderByDescending(LegacyScore)
                 .ThenByDescending(release => release.TrackCount)
                 .ThenBy(release => release.Id)
-                .First();
+                .ToList();
         }
 
         IOrderedEnumerable<AlbumRelease>? ordered = null;
@@ -138,7 +145,102 @@ public static class ReleasePreference
             ordered = Apply(ordered == null ? releases : ordered, rule, ordered == null);
         }
 
-        return ordered!.ThenBy(release => release.Id).First();
+        return ordered!.ThenBy(release => release.Id).ToList();
+    }
+
+    public static IReadOnlyList<AlbumRelease> SampleCatalog()
+    {
+        return new[]
+        {
+            Sample(1, "Digital Media", 11, "Digital", "XW"),
+            Sample(2, "CD", 12, "US CD (12 tracks)", "US"),
+            Sample(3, "CD", 10, "GB CD (10 tracks)", "GB"),
+            Sample(4, "CD", 10, "JP CD (10 tracks)", "JP"),
+            Sample(5, "2xCD", 24, "US 2xCD", "US"),
+            Sample(6, "Vinyl", 10, "US Vinyl", "US"),
+            Sample(7, "Cassette", 10, "US Cassette", "US")
+        };
+    }
+
+    public static IReadOnlyList<FieldSelectOption> Preview(FilterOptions options)
+    {
+        var samples = SampleCatalog();
+        var filtered = samples.Where(release => MediaTypeMatcher.IsReleaseFiltered(release, options)).ToList();
+        var allowed = samples.Except(filtered).ToList();
+
+        IReadOnlyList<AlbumRelease> kept;
+        IReadOnlyList<AlbumRelease> dropped;
+        string firstHint;
+
+        if (allowed.Count > 0)
+        {
+            kept = Rank(allowed, options);
+            dropped = filtered;
+            firstHint = "would be monitored";
+        }
+        else if (options.NoAllowedReleaseAction == NoAllowedReleaseAction.KeepLastResort && filtered.Count > 0)
+        {
+            var rankedFiltered = Rank(filtered, options);
+            kept = new[] { rankedFiltered[0] };
+            dropped = rankedFiltered.Skip(1).ToList();
+            firstHint = "last resort (kept)";
+        }
+        else
+        {
+            kept = Array.Empty<AlbumRelease>();
+            dropped = filtered;
+            firstHint = string.Empty;
+        }
+
+        var optionsList = new List<FieldSelectOption>();
+        for (var i = 0; i < kept.Count; i++)
+        {
+            optionsList.Add(ToOption(i + 1, kept[i], i == 0 ? firstHint : string.Empty));
+        }
+
+        foreach (var release in dropped)
+        {
+            optionsList.Add(ToOption(optionsList.Count + 1, release, "would be deleted"));
+        }
+
+        if (optionsList.Count == 0)
+        {
+            optionsList.Add(new FieldSelectOption
+            {
+                Value = 0,
+                Name = "No sample releases to rank",
+                Order = 0
+            });
+        }
+
+        return optionsList;
+    }
+
+    private static FieldSelectOption ToOption(int order, AlbumRelease release, string hint)
+    {
+        var formats = string.Join('+', MediaTypeMatcher.GetFormats(release));
+        var countries = release.Country is { Count: > 0 } ? string.Join(',', release.Country) : "-";
+        var name = $"{order}. {release.Title} · {formats} · {release.TrackCount} tracks · {countries}";
+        return new FieldSelectOption
+        {
+            Value = release.Id,
+            Name = name,
+            Hint = hint,
+            Order = order
+        };
+    }
+
+    private static AlbumRelease Sample(int id, string format, int trackCount, string title, params string[] countries)
+    {
+        return new AlbumRelease
+        {
+            Id = id,
+            AlbumId = 1,
+            Title = title,
+            TrackCount = trackCount,
+            Country = countries.ToList(),
+            Media = new List<Medium> { new() { Number = 1, Name = format, Format = format } }
+        };
     }
 
     private static IOrderedEnumerable<AlbumRelease> Apply(

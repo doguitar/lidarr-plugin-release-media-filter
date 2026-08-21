@@ -33,6 +33,7 @@ Lidarr stores every pressing of a release group. Import scoring looks at **all s
 | Sort 1–3 | None | After filtering, choose the monitored release by these keys in order. |
 | Sort direction | See Connect | Ascending or descending. Regex fields: descending puts matches first. |
 | Sort regex | empty | Used when the sort key is country regex or medium regex. |
+| Sort preview | sample list | Ranking of typical pressings. The first row is the copy that would be monitored. |
 | Scan interval (minutes) | 1440 | Backfill scan interval. Minimum 60. |
 
 Matching is case-insensitive. `Vinyl` matches `2xVinyl`, `12" Vinyl`, and mixed `Vinyl + CD`. A blacklist drop happens if **any** medium matches. A whitelist keeps a release only if **every** medium matches. Empty/unknown formats are kept.
@@ -51,7 +52,7 @@ Lidarr has no plugin hook before SkyHook writes to the database. After each arti
 
 1. Loads the album’s releases
 2. Deletes filtered releases (and their tracks)
-3. Monitors the remaining release that sorts first (or Digital Media / CD when no sort keys are set)
+3. Monitors the **first** remaining release in that sort order (or Digital Media / CD when no sort keys are set)
 4. Leaves the album with zero releases when nothing allowed remains (automatic import of that album should fail closed)
 
 The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** as a scheduler hook, without a second copy of the Connect settings).

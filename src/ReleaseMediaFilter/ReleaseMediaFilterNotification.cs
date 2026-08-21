@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FluentValidation.Results;
 using NLog;
 using NzbDrone.Core.Notifications;
@@ -29,6 +30,20 @@ public class ReleaseMediaFilterNotification : NotificationBase<ReleaseMediaFilte
     {
         var settings = Definition?.Settings as ReleaseMediaFilterSettings ?? Settings;
         return settings.Validate();
+    }
+
+    public override object RequestAction(string action, IDictionary<string, string> query)
+    {
+        if (!string.Equals(action, ReleasePreference.PreviewAction, StringComparison.OrdinalIgnoreCase))
+        {
+            return new { };
+        }
+
+        var settings = Definition?.Settings as ReleaseMediaFilterSettings ?? Settings;
+        return new
+        {
+            options = ReleasePreference.Preview(settings.ToFilterOptions())
+        };
     }
 
     public override void OnReleaseImport(AlbumDownloadMessage message)

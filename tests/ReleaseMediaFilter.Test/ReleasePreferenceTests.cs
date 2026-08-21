@@ -52,9 +52,11 @@ public class ReleasePreferenceTests
             new ReleaseSortRule(ReleaseSortField.TrackCount, ReleaseSortDirection.Ascending, null),
             new ReleaseSortRule(ReleaseSortField.CountryRegex, ReleaseSortDirection.Descending, "US|GB|UK"));
 
-        var preferred = ReleasePreference.Pick(new[] { usCdLong, gbCdShort, jpCdShort, digital }, options);
+        var ranked = ReleasePreference.Rank(new[] { usCdLong, gbCdShort, jpCdShort, digital }, options);
 
-        Assert.Equal(gbCdShort.Id, preferred.Id);
+        Assert.Equal(new[] { gbCdShort.Id, jpCdShort.Id, usCdLong.Id, digital.Id }, ranked.Select(r => r.Id));
+        Assert.Equal(gbCdShort.Id, ranked[0].Id);
+        Assert.Equal(ranked[0].Id, ReleasePreference.Pick(new[] { usCdLong, gbCdShort, jpCdShort, digital }, options).Id);
     }
 
     [Fact]
@@ -91,5 +93,28 @@ public class ReleasePreferenceTests
         var preferred = ReleasePreference.Pick(new[] { vinyl, doubleCd }, options);
 
         Assert.Equal(doubleCd.Id, preferred.Id);
+    }
+
+    [Fact]
+    public void Preview_marks_first_remaining_release_as_monitored()
+    {
+        var settings = new ReleaseMediaFilterSettings
+        {
+            SortField1 = ReleaseSortField.MediumRegex,
+            SortDirection1 = ReleaseSortDirection.Descending,
+            SortPattern1 = "^CD$",
+            SortField2 = ReleaseSortField.TrackCount,
+            SortDirection2 = ReleaseSortDirection.Ascending,
+            SortField3 = ReleaseSortField.CountryRegex,
+            SortDirection3 = ReleaseSortDirection.Descending,
+            SortPattern3 = "US|GB|UK"
+        };
+
+        var preview = ReleasePreference.Preview(settings.ToFilterOptions());
+        var first = preview[0];
+
+        Assert.Equal("would be monitored", first.Hint);
+        Assert.Contains("GB CD (10 tracks)", first.Name);
+        Assert.Contains(preview, option => option.Hint == "would be deleted" && option.Name.Contains("Vinyl"));
     }
 }

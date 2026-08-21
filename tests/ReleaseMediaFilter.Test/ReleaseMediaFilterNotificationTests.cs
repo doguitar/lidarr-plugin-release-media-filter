@@ -1,4 +1,5 @@
 using NSubstitute;
+using NzbDrone.Core.Annotations;
 using NzbDrone.Core.Music;
 using NzbDrone.Core.Notifications;
 using NzbDrone.Core.Plugins;
@@ -56,5 +57,32 @@ public class ReleaseMediaFilterNotificationTests
         };
 
         Assert.False(subject.Test().IsValid);
+    }
+
+    [Fact]
+    public void RequestAction_previewSort_returns_ranked_sample_options()
+    {
+        var subject = new ReleaseMediaFilterNotification(
+            Substitute.For<IReleaseFilterService>(),
+            Substitute.For<IReleaseMediaFilterSettingsResolver>(),
+            NLog.LogManager.GetLogger("test"))
+        {
+            Definition = new NotificationDefinition
+            {
+                Settings = new ReleaseMediaFilterSettings
+                {
+                    SortField1 = ReleaseSortField.TrackCount,
+                    SortDirection1 = ReleaseSortDirection.Ascending
+                }
+            }
+        };
+
+        var result = subject.RequestAction(ReleasePreference.PreviewAction, new Dictionary<string, string>());
+        var options = result.GetType().GetProperty("options")!.GetValue(result) as IEnumerable<FieldSelectOption>;
+
+        Assert.NotNull(options);
+        var list = options!.ToList();
+        Assert.Equal("would be monitored", list[0].Hint);
+        Assert.Contains(list, option => option.Hint == "would be deleted");
     }
 }

@@ -31,6 +31,7 @@ public class ReleaseMediaFilterSettings : IProviderConfig
         SortField3 = ReleaseSortField.None;
         SortDirection3 = ReleaseSortDirection.Descending;
         SortPattern3 = string.Empty;
+        SortPreview = 0;
         ScanIntervalMinutes = DefaultScanIntervalMinutes;
     }
 
@@ -76,7 +77,10 @@ public class ReleaseMediaFilterSettings : IProviderConfig
     [FieldDefinition(13, Label = "Sort 3 regex", Type = FieldType.Textbox, HelpText = "Used when sort 3 is country regex or medium regex.")]
     public string SortPattern3 { get; set; }
 
-    [FieldDefinition(14, Label = "Scan interval (minutes)", Type = FieldType.Number, HelpText = "How often to run the library backfill scan. Minimum 60 minutes. Defaults to 1440 (24 hours).")]
+    [FieldDefinition(14, Label = "Sort preview", Type = FieldType.Select, SelectOptionsProviderAction = ReleasePreference.PreviewAction, HelpText = "Sample ranking of typical pressings after your filter and sort keys. The first row is the copy that would be monitored. Open the list to refresh after changing sort fields.")]
+    public int SortPreview { get; set; }
+
+    [FieldDefinition(15, Label = "Scan interval (minutes)", Type = FieldType.Number, HelpText = "How often to run the library backfill scan. Minimum 60 minutes. Defaults to 1440 (24 hours).")]
     public int ScanIntervalMinutes { get; set; }
 
     public FilterOptions ToFilterOptions()
