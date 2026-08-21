@@ -21,12 +21,6 @@ public class ReleaseFilterService : IReleaseFilterService
 {
     private static readonly ConcurrentDictionary<int, object> AlbumGates = new();
 
-    private static readonly string[] PreferredFormatOrder =
-    {
-        "Digital Media",
-        "CD"
-    };
-
     private readonly IReleaseService _releaseService;
     private readonly ITrackService _trackService;
     private readonly IAlbumService _albumService;
@@ -103,7 +97,11 @@ public class ReleaseFilterService : IReleaseFilterService
 
         if (filtered.Count == 0)
         {
-            return new FilterResult { ReleasesInspected = releases.Count };
+            return new FilterResult
+            {
+                ReleasesInspected = releases.Count,
+                MonitoredSwitched = SwitchMonitored(albumId, allowed, options)
+            };
         }
 
         var keptLastResort = new List<AlbumRelease>();
@@ -111,7 +109,7 @@ public class ReleaseFilterService : IReleaseFilterService
 
         if (allowed.Count == 0 && options.NoAllowedReleaseAction == NoAllowedReleaseAction.KeepLastResort)
         {
-            var keep = PickPreferred(filtered);
+            var keep = PickPreferred(filtered, options);
             keptLastResort.Add(keep);
             deleteCandidates = filtered.Where(release => release.Id != keep.Id).ToList();
             _logger.Info(
@@ -175,19 +173,7 @@ public class ReleaseFilterService : IReleaseFilterService
             .Where(release => !MediaTypeMatcher.IsReleaseFiltered(release, options))
             .ToList();
 
-        var switched = 0;
-        if (remainingAllowed.Count > 0 && remainingAllowed.TrueForAll(release => !release.Monitored))
-        {
-            var preferred = PickPreferred(remainingAllowed);
-            _releaseService.SetMonitored(preferred);
-            switched = 1;
-
-            _logger.Info(
-                "Release Media Filter: monitored remaining release. albumId={0} release='{1}' formats={2}",
-                albumId,
-                preferred.Title,
-                string.Join('+', MediaTypeMatcher.GetFormats(preferred)));
-        }
+        var switched = SwitchMonitored(albumId, remainingAllowed, options);
 
         var searchesQueued = 0;
         if (options.SearchAfterFileCleanup && filesDeleted > 0 && remainingAllowed.Count > 0)
@@ -213,6 +199,28 @@ public class ReleaseFilterService : IReleaseFilterService
             FilesDeleted = filesDeleted,
             SearchesQueued = searchesQueued
         };
+    }
+
+    private int SwitchMonitored(int albumId, IReadOnlyList<AlbumRelease> remainingAllowed, FilterOptions options)
+    {
+        if (remainingAllowed.Count == 0)
+        {
+            return 0;
+        }
+
+        var preferred = PickPreferred(remainingAllowed, options);
+        if (preferred.Monitored)
+        {
+            return 0;
+        }
+
+        _releaseService.SetMonitored(preferred);
+        _logger.Info(
+            "Release Media Filter: monitored remaining release. albumId={0} release='{1}' formats={2}",
+            albumId,
+            preferred.Title,
+            string.Join('+', MediaTypeMatcher.GetFormats(preferred)));
+        return 1;
     }
 
     private bool TryDeleteImportedFiles(int albumId, AlbumRelease release, out int filesDeleted)
@@ -256,26 +264,8 @@ public class ReleaseFilterService : IReleaseFilterService
         return tracks.Any(track => track.HasFile);
     }
 
-    internal static AlbumRelease PickPreferred(IReadOnlyList<AlbumRelease> releases)
+    internal static AlbumRelease PickPreferred(IReadOnlyList<AlbumRelease> releases, FilterOptions? options = null)
     {
-        return releases
-            .OrderByDescending(Score)
-            .ThenByDescending(release => release.TrackCount)
-            .ThenBy(release => release.Id)
-            .First();
-    }
-
-    private static int Score(AlbumRelease release)
-    {
-        var formats = MediaTypeMatcher.GetFormats(release);
-        for (var i = 0; i < PreferredFormatOrder.Length; i++)
-        {
-            if (formats.Any(format => string.Equals(format, PreferredFormatOrder[i], StringComparison.OrdinalIgnoreCase)))
-            {
-                return PreferredFormatOrder.Length - i;
-            }
-        }
-
-        return 0;
+        return ReleasePreference.Pick(releases, options);
     }
 }

@@ -33,10 +33,11 @@ public class ReleaseFilterServiceTests
     private static FilterOptions Blacklist(
         NoAllowedReleaseAction fallback = NoAllowedReleaseAction.DeleteFiltered,
         bool skipFiles = true,
-        bool searchAfter = false) =>
-        new(FilterMode.Blacklist, new[] { "Vinyl", "Cassette" }, fallback, skipFiles, searchAfter);
+        bool searchAfter = false,
+        IEnumerable<ReleaseSortRule>? sortRules = null) =>
+        new(FilterMode.Blacklist, new[] { "Vinyl", "Cassette" }, fallback, skipFiles, searchAfter, sortRules);
 
-    private static AlbumRelease Release(int id, string format, bool monitored = false, int trackCount = 10, string status = "Official")
+    private static AlbumRelease Release(int id, string format, bool monitored = false, int trackCount = 10, string status = "Official", params string[] countries)
     {
         return new AlbumRelease
         {
@@ -46,6 +47,7 @@ public class ReleaseFilterServiceTests
             Status = status,
             TrackCount = trackCount,
             Monitored = monitored,
+            Country = countries.ToList(),
             Media = new List<Medium> { new() { Number = 1, Name = format, Format = format } }
         };
     }
@@ -261,6 +263,28 @@ public class ReleaseFilterServiceTests
         var preferred = ReleaseFilterService.PickPreferred(new[] { vinyl, cd, digital });
 
         Assert.Equal(digital.Id, preferred.Id);
+    }
+
+    [Fact]
+    public void Switches_monitored_release_using_configured_sort()
+    {
+        var longUs = Release(1, "CD", monitored: true, trackCount: 18, countries: "US");
+        var shortGb = Release(2, "CD", trackCount: 10, countries: "GB");
+        _releaseService.GetReleasesByAlbum(1).Returns(new List<AlbumRelease> { longUs, shortGb });
+        _trackService.GetTracksByRelease(Arg.Any<int>()).Returns(new List<Track>());
+
+        var options = Blacklist(sortRules: new[]
+        {
+            new ReleaseSortRule(ReleaseSortField.MediumRegex, ReleaseSortDirection.Descending, "^CD$"),
+            new ReleaseSortRule(ReleaseSortField.TrackCount, ReleaseSortDirection.Ascending, null),
+            new ReleaseSortRule(ReleaseSortField.CountryRegex, ReleaseSortDirection.Descending, "US|GB|UK")
+        });
+
+        var result = _subject.FilterAlbum(1, options);
+
+        _releaseService.Received(1).SetMonitored(shortGb);
+        Assert.Equal(1, result.MonitoredSwitched);
+        Assert.Equal(0, result.ReleasesDeleted);
     }
 
     [Fact]

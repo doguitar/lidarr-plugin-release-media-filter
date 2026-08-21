@@ -31,7 +31,8 @@ public sealed class FilterOptions
         IEnumerable<string> mediaTypes,
         NoAllowedReleaseAction noAllowedReleaseAction,
         bool skipReleasesWithFiles,
-        bool searchAfterFileCleanup = false)
+        bool searchAfterFileCleanup = false,
+        IEnumerable<ReleaseSortRule>? sortRules = null)
     {
         Mode = mode;
         MediaTypes = (mediaTypes ?? Array.Empty<string>())
@@ -41,6 +42,9 @@ public sealed class FilterOptions
         NoAllowedReleaseAction = noAllowedReleaseAction;
         SkipReleasesWithFiles = skipReleasesWithFiles;
         SearchAfterFileCleanup = searchAfterFileCleanup;
+        SortRules = (sortRules ?? Array.Empty<ReleaseSortRule>())
+            .Where(rule => rule != null && rule.IsActive)
+            .ToList();
     }
 
     public FilterMode Mode { get; }
@@ -52,4 +56,6 @@ public sealed class FilterOptions
     public bool SkipReleasesWithFiles { get; }
 
     public bool SearchAfterFileCleanup { get; }
+
+    public IReadOnlyList<ReleaseSortRule> SortRules { get; }
 }
