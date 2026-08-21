@@ -30,9 +30,21 @@ Lidarr stores every pressing of a release group. Import scoring looks at **all s
 | When no allowed release remains | Keep as last resort | Keep the last filtered release, or delete anyway. |
 | Skip releases that already have files | On | Do not delete a release that already has imported files. |
 | Search after file cleanup | Off | After recycle-bin file deletes, search for the remaining monitored release. |
+| Sort 1–3 | None | After filtering, choose the monitored release by these keys in order. |
+| Sort direction | See Connect | Ascending or descending. Regex fields: descending puts matches first. |
+| Sort regex | empty | Used when the sort key is country regex or medium regex. |
+| Sort preview | sample list | Ranking of typical pressings. The first row is the copy that would be monitored. |
 | Scan interval (minutes) | 1440 | Backfill scan interval. Minimum 60. |
 
 Matching is case-insensitive. `Vinyl` matches `2xVinyl`, `12" Vinyl`, and mixed `Vinyl + CD`. A blacklist drop happens if **any** medium matches. A whitelist keeps a release only if **every** medium matches. Empty/unknown formats are kept.
+
+To prefer a CD with the fewest tracks, then a country (for example US/GB/UK):
+
+1. Sort 1: **Medium regex**, descending, `^CD$`
+2. Sort 2: **Track count**, ascending
+3. Sort 3: **Country regex**, descending, `US|GB|UK`
+
+With all sort keys set to **None**, the plugin keeps the previous default: Digital Media, then CD, then more tracks.
 
 ## How it works
 
@@ -40,7 +52,7 @@ Lidarr has no plugin hook before SkyHook writes to the database. After each arti
 
 1. Loads the album’s releases
 2. Deletes filtered releases (and their tracks)
-3. Monitors a remaining Digital Media or CD release when one exists
+3. If the album has **no imported files**, monitors the **first** remaining release in that sort order (or Digital Media / CD when no sort keys are set). Albums that already have files keep their current monitored release.
 4. Leaves the album with zero releases when nothing allowed remains (automatic import of that album should fail closed)
 
 The next metadata refresh will **re-insert** those MusicBrainz releases. That is expected. The plugin deletes them again on every refresh. A scheduled backfill scan covers the existing library (it may appear under **Settings → Metadata** as a scheduler hook, without a second copy of the Connect settings).
@@ -49,6 +61,7 @@ A failed import does **not** automatically search another indexer unless **Searc
 
 ### Caveats
 
+- The monitored release is only changed on albums that still have no imported files. Albums that already have files keep their current monitored copy.
 - By default, releases that already have imported files are skipped so the library is not broken.
 - If skip-with-files is off, imported files go through Lidarr’s recycle bin before the album release is removed. A failed file delete leaves that release in place.
 - Search after cleanup only runs when at least one file was deleted and an allowed remaining release exists.

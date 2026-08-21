@@ -25,6 +25,7 @@ From the source review (excluding `ext/`). Highest risk is data loss: the plugin
 - [x] **Serialize deletes.** Track delete → release delete → re-query → `SetMonitored` is not transactional. Serialize scan vs refresh for the same album.
 - [x] **Do not backdate `LastExecution`** so the library scan is eligible immediately on first registration.
 - [x] **Import handler:** do not filter with constructor defaults if `Definition.Settings` is missing.
+- [x] **Sort remaining releases** to choose the monitored copy (title, country, track count, medium, optional regex).
 
 ## Low
 
